@@ -12,16 +12,8 @@ __pycache__/
 **.mat
 
 # folders
-/viz/*.pdf
-/viz/*.dot
 /benchmark/*
 /figures/*
 /data/*
 /literature/*
-/papers_to_read/*
-/src/pwp/
-/presentations/
-/src/old/
 /manuscript/*
-/src/process_chi/calculation_mat/*
-/src/process_chi/cleaning_mat/*

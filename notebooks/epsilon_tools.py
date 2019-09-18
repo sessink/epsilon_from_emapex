@@ -14,13 +14,19 @@ def convert_tmsdata(chi_dir):
             'sla2': (['time', 'f_cps'], dat['Sla1']),
             'logavgoff': dat['logavgoff'],
             'logavgsf': dat['logavgsf'],
-            'nobs': dat['nobs'],
-            'floatid':chi_dir.split('-')[1]
+            
+            
         },
         coords={
             'time': time,
             'f_cps': f_cps
-        })
+        },
+        attrs={
+            'nobs': dat['nobs'],
+            'floatid':chi_dir.split('-')[1]
+        }
+    
+    )
 
     return dat
 

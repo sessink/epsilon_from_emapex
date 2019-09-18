@@ -1,6 +1,8 @@
 name: epsilon-env
 channels:
 - conda-forge
+- pyviz
+- defaults
 dependencies:
 - python=3.7
 - numpy
@@ -15,3 +17,11 @@ dependencies:
 - nb_conda_kernels
 - ipykernel
 - holoviews
+- jupyter
+- jupyterlab
+- pyviz
+- hvplot
+- bokeh
+- datashader
+- dask
+- bottleneck
