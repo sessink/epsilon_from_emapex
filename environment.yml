@@ -1,0 +1,17 @@
+name: epsilon-env
+channels:
+- conda-forge
+dependencies:
+- python=3.7
+- numpy
+- scipy
+- matplotlib
+- pandas
+- xarray
+- seaborn
+- gsw
+- cmocean
+- scikit-learn
+- nb_conda_kernels
+- ipykernel
+- holoviews
