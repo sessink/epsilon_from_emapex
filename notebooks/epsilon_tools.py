@@ -1,4 +1,7 @@
 def convert_tmsdata(chi_dir):
+    ''' 
+    Reads raw temperature microstructure spectra and converts them to xarray
+    '''
     from tools import load_matfile
     import pandas as pd
     import xarray as xr
@@ -27,11 +30,13 @@ def convert_tmsdata(chi_dir):
         }
     
     )
-
     return dat
 
 
 def convert_ctddata(ctd_dir):
+    ''' 
+    Reads raw CTD profile data and converts it to xarray
+    '''
     import gsw
     from tools import load_matfile
     import pandas as pd
@@ -62,7 +67,8 @@ def convert_ctddata(ctd_dir):
 
 
 def H2ADCfun(Hz):
-    ''' H2 ADC transfer function
+    ''' 
+    H2 ADC transfer function
     '''
     import numpy as np
     import math
@@ -75,7 +81,8 @@ def H2ADCfun(Hz):
 
 
 def H2FP07fun(Hz, w):
-    ''' H2 Fp07 transfer function
+    ''' 
+    H2 Fp07 transfer function
 
         Hz is frequency in Hz
         U is velocity in m/s
@@ -87,9 +94,23 @@ def H2FP07fun(Hz, w):
     tau = tau0 * w**gamma
     return (1 + (2 * math.pi * Hz * tau)**2)**(-2)
 
+def H2FP07fun_old(Hz, w):
+    ''' 
+    H2 Fp07 transfer function
+
+        Hz is frequency in Hz
+        U is velocity in m/s
+    '''
+    import math
+    gamma = -0.5 # Hill, 1987
+#     gamma = -0.32 # Gregg&Meager, 1980
+    tau0 = 0.005 # [ms] Gregg&Meager, 1980
+    tau = tau0 * w**gamma
+    return (1 + (2 * math.pi * Hz * tau)**2)**(-1)
 
 def H2preampfun(Hz):
-    ''' H2 Preamp transfer function
+    ''' 
+    H2 Preamp transfer function
     '''
     import math
     Fc1 = 339
@@ -103,8 +124,10 @@ def H2preampfun(Hz):
 
 
 def noise_sp(f_cps):
-    # noisesp = 1.0e-11 * [1+(f/130)**3]**2
-    return 1e-11 * (1 + (f_cps / 20)**3)**2
+    ''' 
+    Empirical noise spectrum
+    '''
+    return 1e-11 * (1 + (f_cps / 15)**3)**2
 
 
 def remove_noise_sp(tms, threshold):
@@ -123,6 +146,8 @@ def remove_noise_sp(tms, threshold):
 def batchelor(k_rpm, chi, kb_rpm, p):
     ''' wrapper for batchelor spectrum function to apply to xr dataarray
     '''
+    import xarray as xr
+    
     def np_batchelor(k_rpm, chi, kb_rpm, p):
         '''
         Batchelor temperature gradient spectrum
@@ -147,6 +172,7 @@ def batchelor(k_rpm, chi, kb_rpm, p):
 def kraichnan(k_rpm, chi, kb_rpm, p):
     ''' wrapper for kraichnan spectrum function to apply to xr dataarray
     '''
+    import xarray as xr
     def np_kraichnan(k_rpm, chi, kb_rpm, p):
         '''
         Kraichnan temperature gradient spectrum
