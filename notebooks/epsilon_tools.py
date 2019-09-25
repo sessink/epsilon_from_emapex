@@ -5,19 +5,20 @@ def convert_tmsdata(chi_dir):
     from tools import load_matfile
     import pandas as pd
     import xarray as xr
+    import numpy as np
     
     dat = load_matfile(chi_dir)
 
     f_cps = 0.5 * (dat['flabeg'] + dat['flaend'])
+    dfreq = 0.025
+    deg_of_freedom = 2 * (dat['flaend'] - dat['flabeg'])/dfreq
     time = pd.to_datetime(dat['uxt'], unit='s')
 
     dat = xr.Dataset(
         {
             'sla1': (['time', 'f_cps'], dat['Sla1']),
             'sla2': (['time', 'f_cps'], dat['Sla1']),
-            'logavgoff': dat['logavgoff'],
-            'logavgsf': dat['logavgsf'],
-            
+            'dof': ('f_cps', deg_of_freedom),
             
         },
         coords={
@@ -26,10 +27,15 @@ def convert_tmsdata(chi_dir):
         },
         attrs={
             'nobs': dat['nobs'],
-            'floatid':chi_dir.split('-')[1]
+            'floatid': chi_dir.split('-')[1],
+            'logavgoff': dat['logavgoff'],
+            'logavgsf': dat['logavgsf']
         }
     
     )
+    
+    tms_block['dof'] = ('f_cps', np.round(tms_block.dof))
+    
     return dat
 
 
