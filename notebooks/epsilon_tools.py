@@ -1,3 +1,5 @@
+import param
+
 def convert_tmsdata(chi_dir):
     ''' 
     Reads raw temperature microstructure spectra and converts them to xarray
@@ -192,3 +194,30 @@ def kraichnan(k_rpm, chi, kb_rpm, p):
         denom = (p.D*kb_rpm)
         return nom/denom
     return xr.apply_ufunc(np_kraichnan, k_rpm, chi, kb_rpm, p)
+
+class Parameters(param.Parameterized):
+    
+    # global
+    D = param.Number(1.4e-7, doc='Thermal diffusivity')
+    nu = param.Number(1.2e-6, doc='Viscosity')
+    q = param.Number(3.7, doc='q in Batchelor spectrum')
+    qk = param.Number(5.27, doc='qk in Kraichnan spectrum')
+    gamma = param.Number(0.2, doc='mixing efficiency')
+    
+    # for computation of chi
+    kzmin = param.Number(20, doc='min k where SNR>1')
+    kzmax = param.Number(600, doc='max k where SNR>1')
+    
+    # for RC QC
+    dtdzmin = param.Number(1.5e-3, doc='for eps QC, mininum dTdz')
+    chimax = param.Number(5e-5, doc='for eps QC, maximum chi')
+    kTmax = param.Number(1e-1 , doc='for eps QC, maximum kT')   
+    
+    # for MLE
+    x0 = param.Number(350, doc='for MLE, inital guess for kb') 
+    y0 = param.Number(0, doc='for MLE, inital guess for b') 
+    #% TODO: make dof variable
+    dof = param.Number(5, doc='for MLE, degrees of freedom') 
+    
+    # Goto QC
+    snrmin =  param.Number(1.3, doc='Minimum signal-to-noise ratio.')
