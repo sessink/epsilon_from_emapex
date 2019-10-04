@@ -1,14 +1,14 @@
 import param
 
 def convert_tmsdata(chi_dir):
-    ''' 
+    '''
     Reads raw temperature microstructure spectra and converts them to xarray
     '''
     from tools import load_matfile
     import pandas as pd
     import xarray as xr
     import numpy as np
-    
+
     dat = load_matfile(chi_dir)
 
     f_cps = 0.5 * (dat['flabeg'] + dat['flaend'])
@@ -21,7 +21,7 @@ def convert_tmsdata(chi_dir):
             'sla1': (['time', 'f_cps'], dat['Sla1']),
             'sla2': (['time', 'f_cps'], dat['Sla1']),
             'dof': ('f_cps', deg_of_freedom),
-            
+
         },
         coords={
             'time': time,
@@ -33,23 +33,23 @@ def convert_tmsdata(chi_dir):
             'logavgoff': dat['logavgoff'],
             'logavgsf': dat['logavgsf']
         }
-    
+
     )
-    
+
     tms_block['dof'] = ('f_cps', np.round(tms_block.dof))
-    
+
     return dat
 
 
 def convert_ctddata(ctd_dir):
-    ''' 
+    '''
     Reads raw CTD profile data and converts it to xarray
     '''
     import gsw
     from tools import load_matfile
     import pandas as pd
     import xarray as xr
-    
+
     dat = load_matfile(ctd_dir)
     time = pd.to_datetime(dat['UXT'], unit='s')
 
@@ -75,7 +75,7 @@ def convert_ctddata(ctd_dir):
 
 
 def H2ADCfun(Hz):
-    ''' 
+    '''
     H2 ADC transfer function
     '''
     import numpy as np
@@ -89,7 +89,7 @@ def H2ADCfun(Hz):
 
 
 def H2FP07fun(Hz, w):
-    ''' 
+    '''
     H2 Fp07 transfer function
 
         Hz is frequency in Hz
@@ -103,7 +103,7 @@ def H2FP07fun(Hz, w):
     return (1 + (2 * math.pi * Hz * tau)**2)**(-2)
 
 def H2FP07fun_old(Hz, w):
-    ''' 
+    '''
     H2 Fp07 transfer function
 
         Hz is frequency in Hz
@@ -117,7 +117,7 @@ def H2FP07fun_old(Hz, w):
     return (1 + (2 * math.pi * Hz * tau)**2)**(-1)
 
 def H2preampfun(Hz):
-    ''' 
+    '''
     H2 Preamp transfer function
     '''
     import math
@@ -131,11 +131,12 @@ def H2preampfun(Hz):
     return H2_1 + H2_2 / H2_3
 
 
-def noise_sp(f_cps):
-    ''' 
+def noise_spectrum(f_cps):
+    '''
     Empirical noise spectrum
     '''
-    return 1e-11 * (1 + (f_cps / 15)**3)**2
+    para = 20 # previously 15
+    return 1e-11 * (1 + (f_cps / para)**3)**2
 
 
 def remove_noise_sp(tms, threshold):
@@ -155,7 +156,7 @@ def batchelor(k_rpm, chi, kb_rpm, p):
     ''' wrapper for batchelor spectrum function to apply to xr dataarray
     '''
     import xarray as xr
-    
+
     def np_batchelor(k_rpm, chi, kb_rpm, p):
         '''
         Batchelor temperature gradient spectrum
@@ -173,7 +174,7 @@ def batchelor(k_rpm, chi, kb_rpm, p):
             uppera.append(erfc(ai / math.sqrt(2)) * math.sqrt(0.5 * math.pi))
         g = 2 * math.pi * a * (np.exp(-0.5 * a**2) - a * np.array(uppera))
         return math.sqrt(0.5 * p.q) * (chi / (kb_rpm* p.D)) * g / (2 * math.pi)
-    
+
     return xr.apply_ufunc(np_batchelor, k_rpm, chi, kb_rpm, p)
 
 
@@ -196,28 +197,28 @@ def kraichnan(k_rpm, chi, kb_rpm, p):
     return xr.apply_ufunc(np_kraichnan, k_rpm, chi, kb_rpm, p)
 
 class Parameters(param.Parameterized):
-    
+
     # global
     D = param.Number(1.4e-7, doc='Thermal diffusivity')
     nu = param.Number(1.2e-6, doc='Viscosity')
     q = param.Number(3.7, doc='q in Batchelor spectrum')
     qk = param.Number(5.27, doc='qk in Kraichnan spectrum')
     gamma = param.Number(0.2, doc='mixing efficiency')
-    
+
     # for computation of chi
     kzmin = param.Number(20, doc='min k where SNR>1')
     kzmax = param.Number(600, doc='max k where SNR>1')
-    
+
     # for RC QC
     dtdzmin = param.Number(1.5e-3, doc='for eps QC, mininum dTdz')
     chimax = param.Number(5e-5, doc='for eps QC, maximum chi')
-    kTmax = param.Number(1e-1 , doc='for eps QC, maximum kT')   
-    
+    kTmax = param.Number(1e-1 , doc='for eps QC, maximum kT')
+
     # for MLE
-    x0 = param.Number(350, doc='for MLE, inital guess for kb') 
-    y0 = param.Number(0, doc='for MLE, inital guess for b') 
+    x0 = param.Number(350, doc='for MLE, inital guess for kb')
+    y0 = param.Number(0, doc='for MLE, inital guess for b')
     #% TODO: make dof variable
-    dof = param.Number(5, doc='for MLE, degrees of freedom') 
-    
+    dof = param.Number(5, doc='for MLE, degrees of freedom')
+
     # Goto QC
     snrmin =  param.Number(1.3, doc='Minimum signal-to-noise ratio.')
