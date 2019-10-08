@@ -1,5 +1,31 @@
 import param
 
+class Parameters(param.Parameterized):
+
+    # global
+    D = param.Number(1.4e-7, doc='Thermal diffusivity')
+    nu = param.Number(1.2e-6, doc='Viscosity')
+    q = param.Number(3.7, doc='q in Batchelor spectrum')
+    qk = param.Number(5.27, doc='qk in Kraichnan spectrum')
+    gamma = param.Number(0.2, doc='mixing efficiency')
+
+    # for computation of chi
+    kzmin = param.Number(20, doc='min k where SNR>1')
+    kzmax = param.Number(600, doc='max k where SNR>1')
+
+    # for RC QC
+    dtdzmin = param.Number(1.5e-3, doc='for eps QC, mininum dTdz')
+    chimax = param.Number(5e-5, doc='for eps QC, maximum chi')
+    kTmax = param.Number(1e-1, doc='for eps QC, maximum kT')
+
+    # for MLE
+    x0 = param.Number(350, doc='for MLE, inital guess for kb')
+    y0 = param.Number(0, doc='for MLE, inital guess for b')
+    dof = param.Number(5, doc='for MLE, degrees of freedom')
+
+    # Goto QC
+    snrmin = param.Number(1.3, doc='Minimum signal-to-noise ratio.')
+
 
 def convert_tmsdata(chi_dir):
     '''
@@ -200,34 +226,6 @@ def kraichnan(k_rpm, chi, kb_rpm, p):
     return xr.apply_ufunc(np_kraichnan, k_rpm, chi, kb_rpm, p)
 
 
-class Parameters(param.Parameterized):
-
-    # global
-    D = param.Number(1.4e-7, doc='Thermal diffusivity')
-    nu = param.Number(1.2e-6, doc='Viscosity')
-    q = param.Number(3.7, doc='q in Batchelor spectrum')
-    qk = param.Number(5.27, doc='qk in Kraichnan spectrum')
-    gamma = param.Number(0.2, doc='mixing efficiency')
-
-    # for computation of chi
-    kzmin = param.Number(20, doc='min k where SNR>1')
-    kzmax = param.Number(600, doc='max k where SNR>1')
-
-    # for RC QC
-    dtdzmin = param.Number(1.5e-3, doc='for eps QC, mininum dTdz')
-    chimax = param.Number(5e-5, doc='for eps QC, maximum chi')
-    kTmax = param.Number(1e-1, doc='for eps QC, maximum kT')
-
-    # for MLE
-    x0 = param.Number(350, doc='for MLE, inital guess for kb')
-    y0 = param.Number(0, doc='for MLE, inital guess for b')
-    #% TODO: make dof variable
-    dof = param.Number(5, doc='for MLE, degrees of freedom')
-
-    # Goto QC
-    snrmin = param.Number(1.3, doc='Minimum signal-to-noise ratio.')
-
-
 def prepare_data(tms, ctd):
     '''
     Procedure to calculate chi from EM-APEX float
@@ -323,7 +321,7 @@ def compute_chi(tms, p):
         tms['chi1'] = np.nan
         tms['isnr1'] = np.nan
 
-    if cond1.sum() >= 3:
+    if cond2.sum() >= 3:
         tms['chi2'] = 6 * p.D * (tms.corrdTdzsp2_rpm -
                                  tms.noise_rpm).where(cond2).dropna(
                                      dim='k_rpm').integrate('k_rpm')
@@ -344,6 +342,7 @@ def compute_rc_eps(tms, p):
     '''
     import xarray as xr
 
+    #% TODO: qc n2, dTdz
     tms['kt1'] = 0.5 * tms.chi1 / tms.dTdz**2
     tms['eps1_rc'] = tms.kt1 * tms.N2 / p.gamma
     tms['kb1_rc'] = (tms.eps1_rc / p.nu / p.D**2)**(0.25)
@@ -358,82 +357,82 @@ def compute_rc_eps(tms, p):
     return tms
 
 
-# def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function):
-#     '''
-#     Cost function for MLE to fit spectra
-#     '''
-#     import bottleneck as bn
-#
-#     def chisquared(x, dof):
-#         from scipy.special import xlogy, gammaln
-#         import math
-#         import numpy as np
-#         return np.exp( xlogy(dof/2-1, x) - x/2 - gammaln(dof/2.) - (math.log(2)*dof)/2 )
-#
-#     if function.lower() == 'batchelor':
-#         theory = batchelor(k_rpm, chi, kb, p)
-#     elif function.lower() == 'kraichnan':
-#         theory = kraichnan(k_rpm, chi, kb, p)
-#     elif function.lower() == 'power':
-#         theory = kb[0]*k_rpm**(-kb[1])
-#     else:
-#         raise ValueError('Function not known!')
-#
-#     a = dof / (theory + noise)
-#     b = chisquared(corrdTdz * a, dof)
-#     c = np.log(a * b)
-#
-#     return -bn.nansum(c)
-
-
-def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function, bin_theory,
-                  p):
+def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function, bin_theory, p):
     '''
     Cost function for MLE to fit spectra
-
-    log chi2 rewritten from scipy.chi2._logpdf
     '''
     import bottleneck as bn
-    from epsilon_tools import kraichnan, batchelor
-    from scipy.special import xlogy, gammaln
     import numpy as np
-    import math
 
-    def powerlaw(k_rpm, chi, kb, p):
-        return kb[0] * k_rpm**(-kb[1])
+    def chisquared(x, dof):
+        from scipy.special import xlogy, gammaln
+        import math
+        import numpy as np
+        return np.exp( xlogy(dof/2.-1., x) - x/2 - gammaln(dof/2.) - (math.log(2.)*dof)/2. )
 
     if function.lower() == 'batchelor':
-        fun = batchelor
+        theory = batchelor(k_rpm, chi, kb, p)
     elif function.lower() == 'kraichnan':
-        fun = kraichnan
+        theory = kraichnan(k_rpm, chi, kb, p)
     elif function.lower() == 'power':
-        fun = powerlaw
+        theory = kb[0]*k_rpm**(-kb[1])
     else:
         raise ValueError('Function not known!')
 
-    # if bin_theory:
-    #     logbins = np.logspace(-1,1.7,20)
-    #     f_cps = np.linspace(0,60,5000)
-    #     w = 0.1
-    #     k_rpm = f_cps* 2 * np.pi/w
-    #     digit = np.digitize(f_cps, logbins)
-    #
-    #     bs=[]
-    #     for i in range(len(logbins)):
-    #         bs.append( bn.nanmedian( fun( k_rpm[digit==i], chi, kb, p ) ))
-    #
-    #     theory = np.array(bs)
-    #
-    # else:
-
-    theory = fun(k_rpm, chi, kb, p)
-
     a = dof / (theory + noise)
-    b = corrdTdz * a
+    b = chisquared(corrdTdz * a, dof)
+    c = np.log(a * b)
 
-    summe = -np.nansum(np.log(a)) - np.nansum(xlogy(dof/2-1, b)) +\
-            np.nansum(b/2) + np.nansum(gammaln(dof/2.) + (math.log(2)*dof)/2)
-    return summe
+    return -bn.nansum(c)
+
+
+# def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function, bin_theory,
+#                   p):
+#     '''
+#     Cost function for MLE to fit spectra
+#
+#     log chi2 rewritten from scipy.chi2._logpdf
+#     '''
+#     import bottleneck as bn
+#     from epsilon_tools import kraichnan, batchelor
+#     from scipy.special import xlogy, gammaln
+#     import numpy as np
+#     import math
+#
+#     def powerlaw(k_rpm, chi, kb, p):
+#         return kb[0] * k_rpm**(-kb[1])
+#
+#     if function.lower() == 'batchelor':
+#         fun = batchelor
+#     elif function.lower() == 'kraichnan':
+#         fun = kraichnan
+#     elif function.lower() == 'power':
+#         fun = powerlaw
+#     else:
+#         raise ValueError('Function not known!')
+#
+#     # if bin_theory:
+#     #     logbins = np.logspace(-1,1.7,20)
+#     #     f_cps = np.linspace(0,60,5000)
+#     #     w = 0.1
+#     #     k_rpm = f_cps* 2 * np.pi/w
+#     #     digit = np.digitize(f_cps, logbins)
+#     #
+#     #     bs=[]
+#     #     for i in range(len(logbins)):
+#     #         bs.append( bn.nanmedian( fun( k_rpm[digit==i], chi, kb, p ) ))
+#     #
+#     #     theory = np.array(bs)
+#     #
+#     # else:
+#
+#     theory = fun(k_rpm, chi, kb, p)
+#
+#     a = dof / (theory + noise)
+#     b = corrdTdz * a
+#
+#     return (-np.nansum(np.log(a)) - np.nansum(xlogy(dof/2-1, b)) +\
+#             np.nansum(b/2) + np.nansum(gammaln(dof/2.) + (math.log(2)*dof)/2))
 
 
 def compute_goto_eps(tms, p, bin_theory=False):
@@ -456,13 +455,14 @@ def compute_goto_eps(tms, p, bin_theory=False):
     dtdz1 = tms.where(cond1).corrdTdzsp1_rpm.values
     dtdz2 = tms.where(cond2).corrdTdzsp2_rpm.values
 
-    options = {'maxiter': 1000, 'xatol': 1e-5, 'fatol': 1e-5}
-    args = (k_rpm, chi1, noise, dtdz1, dof, 'Batchelor', bin_theory, p)
+    options = {'maxiter':1000,'xatol':1e-3,'fatol':1e-3}
+    args = (k_rpm, chi1, noise, dtdz1, dof, 'batchelor', bin_theory, p)
     m = minimize(cost_function,
                  x0=p.x0,
                  args=args,
                  method='Nelder-Mead',
-                 options=options)
+                 options=options
+                 )
     if m.success:
         tms['kb1_bat'] = m.x[0]
         tms['l1_bat'] = -m.fun
@@ -470,12 +470,13 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['kb1_bat'] = np.nan
         tms['l1_bat'] = np.nan
 
-    args = (k_rpm, chi2, noise, dtdz2, dof, 'Batchelor', bin_theory, p)
+    args = (k_rpm, chi2, noise, dtdz2, dof, 'batchelor', bin_theory, p)
     m = minimize(cost_function,
                  x0=p.x0,
                  args=args,
                  method='Nelder-Mead',
-                 options=options)
+                 options=options
+                 )
     if m.success:
         tms['kb2_bat'] = m.x[0]
         tms['l2_bat'] = -m.fun
@@ -483,12 +484,13 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['kb2_bat'] = np.nan
         tms['l2_bat'] = np.nan
 
-    args = (k_rpm, chi1, noise, dtdz1, dof, 'Kraichnan', bin_theory, p)
+    args = (k_rpm, chi1, noise, dtdz1, dof, 'kraichnan', bin_theory, p)
     m = minimize(cost_function,
                  x0=p.x0,
                  args=args,
                  method='Nelder-Mead',
-                 options=options)
+                 options=options
+                 )
     if m.success:
         tms['kb1_kra'] = m.x[0]
         tms['l1_kra'] = -m.fun
@@ -496,12 +498,13 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['kb1_kra'] = np.nan
         tms['l1_kra'] = np.nan
 
-    args = (k_rpm, chi2, noise, dtdz2, dof, 'Kraichnan', bin_theory, p)
+    args = (k_rpm, chi2, noise, dtdz2, dof, 'kraichnan', bin_theory, p)
     m = minimize(cost_function,
                  x0=p.x0,
                  args=args,
                  method='Nelder-Mead',
-                 options=options)
+                 options=options
+                 )
     if m.success:
         tms['kb2_kra'] = m.x[0]
         tms['l2_kra'] = -m.fun
@@ -533,7 +536,8 @@ def compute_goto_eps(tms, p, bin_theory=False):
                  x0=[np.nanmean(dtdz1), 0],
                  args=args,
                  method='Nelder-Mead',
-                 options=options)
+                 options=options
+                 )
     if m.success:
         tms['A1'], tms['b1'] = m.x
         tms['l1'] = -m.fun
@@ -546,7 +550,8 @@ def compute_goto_eps(tms, p, bin_theory=False):
                  x0=[np.nanmean(dtdz2), 0],
                  args=args,
                  method='Nelder-Mead',
-                 options=options)
+                 options=options
+                 )
     if m.success:
         tms['A2'], tms['b2'] = m.x
         tms['l2'] = -m.fun
@@ -593,6 +598,10 @@ def qc_rc_eps(data, p):
     '''
     clean chi and eps with RC's scripts
     '''
+    import numpy as np
+    import xarray as xr
+    from tools import str2date, avg_funs
+
     floats = np.array([
         '7779a', '7781a', '7783a', '7786a', '7787a', '7788a', '7700b', '7701b',
         '7780b', '7784b', '7785b', '7786b'
