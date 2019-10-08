@@ -24,7 +24,7 @@ class Parameters(param.Parameterized):
     dof = param.Number(5, doc='for MLE, degrees of freedom')
 
     # Goto QC
-    snrmin = param.Number(1.3, doc='Minimum signal-to-noise ratio.')
+    snrmin = param.Number(3, doc='Minimum signal-to-noise ratio.')
 
 
 def convert_tmsdata(chi_dir):
@@ -179,7 +179,8 @@ def remove_noise_sp(tms, threshold):
 
 
 def batchelor(k_rpm, chi, kb_rpm, p):
-    ''' wrapper for batchelor spectrum function to apply to xr dataarray
+    '''
+    rapper for batchelor spectrum function to apply to xr dataarray
     '''
     import xarray as xr
 
@@ -206,7 +207,8 @@ def batchelor(k_rpm, chi, kb_rpm, p):
 
 
 def kraichnan(k_rpm, chi, kb_rpm, p):
-    ''' wrapper for kraichnan spectrum function to apply to xr dataarray
+    '''
+    wrapper for kraichnan spectrum function to apply to xr dataarray
     '''
     import xarray as xr
 
@@ -275,6 +277,7 @@ def prepare_data(tms, ctd):
     #     tms = remove_noise_sp(tms, threshold)
 
     tms['noise_cps'] = noise_spectrum(tms.f_cps)
+    tms['noise_rpm'] = tms.k_rpm**2 * tms.noise_cps * tms.w / (2 * np.pi)
 
     # compute signal-to-noise ratio
     tms['snr1'] = tms.corrTsp1_cps / tms.noise_cps
@@ -302,7 +305,7 @@ def compute_chi(tms, p):
     import numpy as np
 
     # % 7) compute chi, kT, and eps1
-    tms['noise_rpm'] = tms.k_rpm**2 * tms.noise_cps * tms.w / (2 * np.pi)
+
 
     tms = tms.swap_dims({'f_cps': 'k_rpm'})
     #     condition = (tms.k_rpm <= p.kzmax) & (tms.k_rpm >= p.kzmin)
@@ -357,82 +360,82 @@ def compute_rc_eps(tms, p):
     return tms
 
 
-def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function, bin_theory, p):
-    '''
-    Cost function for MLE to fit spectra
-    '''
-    import bottleneck as bn
-    import numpy as np
-
-    def chisquared(x, dof):
-        from scipy.special import xlogy, gammaln
-        import math
-        import numpy as np
-        return np.exp( xlogy(dof/2.-1., x) - x/2 - gammaln(dof/2.) - (math.log(2.)*dof)/2. )
-
-    if function.lower() == 'batchelor':
-        theory = batchelor(k_rpm, chi, kb, p)
-    elif function.lower() == 'kraichnan':
-        theory = kraichnan(k_rpm, chi, kb, p)
-    elif function.lower() == 'power':
-        theory = kb[0]*k_rpm**(-kb[1])
-    else:
-        raise ValueError('Function not known!')
-
-    a = dof / (theory + noise)
-    b = chisquared(corrdTdz * a, dof)
-    c = np.log(a * b)
-
-    return -bn.nansum(c)
-
-
-# def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function, bin_theory,
-#                   p):
+# def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function, bin_theory, p):
 #     '''
 #     Cost function for MLE to fit spectra
-#
-#     log chi2 rewritten from scipy.chi2._logpdf
 #     '''
 #     import bottleneck as bn
-#     from epsilon_tools import kraichnan, batchelor
-#     from scipy.special import xlogy, gammaln
 #     import numpy as np
-#     import math
 #
-#     def powerlaw(k_rpm, chi, kb, p):
-#         return kb[0] * k_rpm**(-kb[1])
+#     def chisquared(x, dof):
+#         from scipy.special import xlogy, gammaln
+#         import math
+#         import numpy as np
+#         return np.exp( xlogy(dof/2.-1., x) - x/2 - gammaln(dof/2.) - (math.log(2.)*dof)/2. )
 #
 #     if function.lower() == 'batchelor':
-#         fun = batchelor
+#         theory = batchelor(k_rpm, chi, kb, p)
 #     elif function.lower() == 'kraichnan':
-#         fun = kraichnan
+#         theory = kraichnan(k_rpm, chi, kb, p)
 #     elif function.lower() == 'power':
-#         fun = powerlaw
+#         theory = kb[0]*k_rpm**(-kb[1])
 #     else:
 #         raise ValueError('Function not known!')
 #
-#     # if bin_theory:
-#     #     logbins = np.logspace(-1,1.7,20)
-#     #     f_cps = np.linspace(0,60,5000)
-#     #     w = 0.1
-#     #     k_rpm = f_cps* 2 * np.pi/w
-#     #     digit = np.digitize(f_cps, logbins)
-#     #
-#     #     bs=[]
-#     #     for i in range(len(logbins)):
-#     #         bs.append( bn.nanmedian( fun( k_rpm[digit==i], chi, kb, p ) ))
-#     #
-#     #     theory = np.array(bs)
-#     #
-#     # else:
-#
-#     theory = fun(k_rpm, chi, kb, p)
-#
 #     a = dof / (theory + noise)
-#     b = corrdTdz * a
+#     b = chisquared(corrdTdz * a, dof)
+#     c = np.log(a * b)
 #
-#     return (-np.nansum(np.log(a)) - np.nansum(xlogy(dof/2-1, b)) +\
-#             np.nansum(b/2) + np.nansum(gammaln(dof/2.) + (math.log(2)*dof)/2))
+#     return -bn.nansum(c)
+
+
+def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function, bin_theory,
+                  p):
+    '''
+    Cost function for MLE to fit spectra
+
+    log chi2 rewritten from scipy.chi2._logpdf
+    '''
+    import bottleneck as bn
+    from epsilon_tools import kraichnan, batchelor
+    from scipy.special import xlogy, gammaln
+    import numpy as np
+    import math
+
+    def powerlaw(k_rpm, chi, kb, p):
+        return kb[0] * k_rpm**(-kb[1])
+
+    if function.lower() == 'batchelor':
+        fun = batchelor
+    elif function.lower() == 'kraichnan':
+        fun = kraichnan
+    elif function.lower() == 'power':
+        fun = powerlaw
+    else:
+        raise ValueError('Function not known!')
+
+    # if bin_theory:
+    #     logbins = np.logspace(-1,1.7,20)
+    #     f_cps = np.linspace(0,60,5000)
+    #     w = 0.1
+    #     k_rpm = f_cps* 2 * np.pi/w
+    #     digit = np.digitize(f_cps, logbins)
+    #
+    #     bs=[]
+    #     for i in range(len(logbins)):
+    #         bs.append( bn.nanmedian( fun( k_rpm[digit==i], chi, kb, p ) ))
+    #
+    #     theory = np.array(bs)
+    #
+    # else:
+
+    theory = fun(k_rpm, chi, kb, p)
+
+    a = dof / (theory + noise)
+    b = corrdTdz * a
+
+    return (-np.nansum(np.log(a)) - np.nansum(xlogy(dof/2-1, b)) +\
+            np.nansum(b/2) + np.nansum(gammaln(dof/2.) + (math.log(2)*dof)/2))
 
 
 def compute_goto_eps(tms, p, bin_theory=False):
@@ -455,7 +458,8 @@ def compute_goto_eps(tms, p, bin_theory=False):
     dtdz1 = tms.where(cond1).corrdTdzsp1_rpm.values
     dtdz2 = tms.where(cond2).corrdTdzsp2_rpm.values
 
-    options = {'maxiter':1000,'xatol':1e-3,'fatol':1e-3}
+    # options = {'maxiter':1000,'xatol':1e-3,'fatol':1e-3}
+    options = {}
     args = (k_rpm, chi1, noise, dtdz1, dof, 'batchelor', bin_theory, p)
     m = minimize(cost_function,
                  x0=p.x0,
