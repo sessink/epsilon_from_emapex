@@ -57,7 +57,8 @@ def convert_tmsdata(chi_dir):
             'nobs': dat['nobs'],
             'floatid': chi_dir.split('-')[1],
             'logavgoff': dat['logavgoff'],
-            'logavgsf': dat['logavgsf']
+            'logavgsf': dat['logavgsf'],
+            'logbins': np.append(dat['flabeg'],dat['flaend'][-1])
         })
 
     dat['dof'] = ('f_cps', np.round(dat.dof))
@@ -389,7 +390,7 @@ def compute_rc_eps(tms, p):
 #     return -bn.nansum(c)
 
 
-def cost_function(kb, k_rpm, f_cps, chi, noise, corrdTdz, dof, function, bin_theory,
+def cost_function(kb, k_rpm, f_cps, chi, noise, corrdTdz, dof, function, bin_theory, logbins,
                   p):
     '''
     Cost function for MLE to fit spectra
@@ -416,8 +417,8 @@ def cost_function(kb, k_rpm, f_cps, chi, noise, corrdTdz, dof, function, bin_the
 
     if bin_theory:
         # logbins = np.logspace(-1,1.7,20)
-        logbins = 0.5*(f_cps[0:-1]+f_cps[1:])
-        f_cps = np.linspace(0,60,5000)
+        # logbins = 0.5*(f_cps[0:-1]+f_cps[1:])
+        f_cps = np.linspace(logbins.min(),logbins.max(),5000)
         w = 0.1
         k_rpm = f_cps* 2 * np.pi/w
         digit = np.digitize(f_cps, logbins)
