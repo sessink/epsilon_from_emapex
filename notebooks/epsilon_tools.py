@@ -390,7 +390,7 @@ def compute_rc_eps(tms, p):
 #     return -bn.nansum(c)
 
 
-def cost_function(kb, k_rpm, f_cps, chi, noise, corrdTdz, dof, function, bin_theory, logbins,
+def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function, bin_theory, logbins,
                   p):
     '''
     Cost function for MLE to fit spectra
@@ -418,10 +418,8 @@ def cost_function(kb, k_rpm, f_cps, chi, noise, corrdTdz, dof, function, bin_the
     if bin_theory:
         # logbins = np.logspace(-1,1.7,20)
         # logbins = 0.5*(f_cps[0:-1]+f_cps[1:])
-        f_cps = np.linspace(logbins.min(),logbins.max(),5000)
-        w = 0.1
-        k_rpm = f_cps* 2 * np.pi/w
-        digit = np.digitize(f_cps, logbins)
+        fsample = np.linspace(logbins.min(),logbins.max(),5000)
+        digit = np.digitize(fsample, logbins)
 
         bs=[]
         for i in range(len(logbins)):
@@ -461,7 +459,7 @@ def compute_goto_eps(tms, p, bin_theory=False):
     dtdz2 = tms.where(cond2).corrdTdzsp2_rpm.values
 
     options = {'maxiter':1000,'xatol':1e-2,'fatol':1e-2}
-    args = (k_rpm, f_cps, chi1, noise, dtdz1, dof, 'batchelor', bin_theory, p)
+    args = (k_rpm, chi1, noise, dtdz1, dof, 'batchelor', bin_theory, tms.logbins, p)
     m = minimize(cost_function,
                  x0=p.x0,
                  args=args,
@@ -475,7 +473,7 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['kb1_bat'] = np.nan
         tms['l1_bat'] = np.nan
 
-    args = (k_rpm, f_cps, chi2, noise, dtdz2, dof, 'batchelor', bin_theory, p)
+    args = (k_rpm, chi2, noise, dtdz2, dof, 'batchelor', bin_theory,tms.logbins, p)
     m = minimize(cost_function,
                  x0=p.x0,
                  args=args,
@@ -489,7 +487,7 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['kb2_bat'] = np.nan
         tms['l2_bat'] = np.nan
 
-    args = (k_rpm, f_cps, chi1, noise, dtdz1, dof, 'kraichnan', bin_theory, p)
+    args = (k_rpm, chi1, noise, dtdz1, dof, 'kraichnan', bin_theory,tms.logbins, p)
     m = minimize(cost_function,
                  x0=p.x0,
                  args=args,
@@ -503,7 +501,7 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['kb1_kra'] = np.nan
         tms['l1_kra'] = np.nan
 
-    args = (k_rpm, f_cps, chi2, noise, dtdz2, dof, 'kraichnan', bin_theory, p)
+    args = (k_rpm, chi2, noise, dtdz2, dof, 'kraichnan', bin_theory,tms.logbins, p)
     m = minimize(cost_function,
                  x0=p.x0,
                  args=args,
@@ -536,7 +534,7 @@ def compute_goto_eps(tms, p, bin_theory=False):
     tms['y_rc1'] = dtdz1 / (tms.bat1_rc + noise)
     tms['y_rc2'] = dtdz2 / (tms.bat2_rc + noise)
 
-    args = (k_rpm, f_cps, chi1, noise, dtdz1, dof, 'power', bin_theory, p)
+    args = (k_rpm, chi1, noise, dtdz1, dof, 'power', bin_theory,tms.logbins, p)
     m = minimize(cost_function,
                  x0=[np.nanmean(dtdz1), 0],
                  args=args,
@@ -550,7 +548,7 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['A1'], tms['b1'] = [np.nan, np.nan]
         tms['l1'] = np.nan
 
-    args = (k_rpm, f_cps, chi2, noise, dtdz2, dof, 'power', bin_theory, p)
+    args = (k_rpm, chi2, noise, dtdz2, dof, 'power', bin_theory,tms.logbins, p)
     m = minimize(cost_function,
                  x0=[np.nanmean(dtdz2), 0],
                  args=args,
