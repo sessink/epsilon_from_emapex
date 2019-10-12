@@ -1,5 +1,6 @@
 import param
 
+
 class Parameters(param.Parameterized):
 
     # global
@@ -58,7 +59,7 @@ def convert_tmsdata(chi_dir):
             'floatid': chi_dir.split('-')[1],
             'logavgoff': dat['logavgoff'],
             'logavgsf': dat['logavgsf'],
-            'logbins': np.append(dat['flabeg'],dat['flaend'][-1])
+            'logbins': np.append(dat['flabeg'], dat['flaend'][-1])
         })
 
     dat['dof'] = ('f_cps', np.round(dat.dof))
@@ -307,7 +308,6 @@ def compute_chi(tms, p):
 
     # % 7) compute chi, kT, and eps1
 
-
     tms = tms.swap_dims({'f_cps': 'k_rpm'})
     #     condition = (tms.k_rpm <= p.kzmax) & (tms.k_rpm >= p.kzmin)
 
@@ -390,8 +390,8 @@ def compute_rc_eps(tms, p):
 #     return -bn.nansum(c)
 
 
-def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function, bin_theory, logbins,
-                  p):
+def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function,
+                  bin_theory, logbins, ksample, digit, cond, p):
     '''
     Cost function for MLE to fit spectra
 
@@ -416,17 +416,16 @@ def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function, bin_theory, lo
         raise ValueError('Function not known!')
 
     if bin_theory:
-        # logbins = np.logspace(-1,1.7,20)
-        # logbins = 0.5*(f_cps[0:-1]+f_cps[1:])
-        fsample = np.linspace(logbins.min(),logbins.max(),5000)
-        digit = np.digitize(fsample, logbins)
 
-        bs=[]
+        bs = []
         for i in range(len(logbins)):
-            bs.append( bn.nanmean( fun( k_rpm[digit==i], chi, kb, p ) ))
+            if np.isfinite(ksample[digit == i]).sum() > 0:
+                bs.append(bn.nanmean(fun(ksample[digit == i], chi, kb, p)))
+            else:
+                bs.append(np.nan)
 
         theory = np.array(bs)
-
+        theory = np.where(cond,theory,np.nan)
     else:
         theory = fun(k_rpm, chi, kb, p)
 
@@ -458,14 +457,20 @@ def compute_goto_eps(tms, p, bin_theory=False):
     dtdz1 = tms.where(cond1).corrdTdzsp1_rpm.values
     dtdz2 = tms.where(cond2).corrdTdzsp2_rpm.values
 
-    options = {'maxiter':1000,'xatol':1e-2,'fatol':1e-2}
-    args = (k_rpm, chi1, noise, dtdz1, dof, 'batchelor', bin_theory, tms.logbins, p)
+    fsample = np.linspace(tms.logbins.min(), tms.logbins.max(), 5000)
+    ksample = fsample * 2 * np.pi / np.nanmean(tms.w)
+    digit = np.digitize(fsample, tms.logbins)
+
+    # options = {'maxiter': 1000, 'xatol': 1e-2, 'fatol': 1e-2}
+    options = {}
+
+    args = (k_rpm, chi1, noise, dtdz1, dof, 'batchelor', bin_theory,
+            tms.logbins, ksample, digit, cond1, p)
     m = minimize(cost_function,
                  x0=p.x0,
                  args=args,
                  method='Nelder-Mead',
-                 options=options
-                 )
+                 options=options)
     if m.success:
         tms['kb1_bat'] = m.x[0]
         tms['l1_bat'] = -m.fun
@@ -473,13 +478,13 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['kb1_bat'] = np.nan
         tms['l1_bat'] = np.nan
 
-    args = (k_rpm, chi2, noise, dtdz2, dof, 'batchelor', bin_theory,tms.logbins, p)
+    args = (k_rpm, chi2, noise, dtdz2, dof, 'batchelor', bin_theory,
+            tms.logbins, ksample, digit, cond1, p)
     m = minimize(cost_function,
                  x0=p.x0,
                  args=args,
                  method='Nelder-Mead',
-                 options=options
-                 )
+                 options=options)
     if m.success:
         tms['kb2_bat'] = m.x[0]
         tms['l2_bat'] = -m.fun
@@ -487,13 +492,13 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['kb2_bat'] = np.nan
         tms['l2_bat'] = np.nan
 
-    args = (k_rpm, chi1, noise, dtdz1, dof, 'kraichnan', bin_theory,tms.logbins, p)
+    args = (k_rpm, chi1, noise, dtdz1, dof, 'kraichnan',
+            bin_theory, tms.logbins, ksample, digit, cond1, p)
     m = minimize(cost_function,
                  x0=p.x0,
                  args=args,
                  method='Nelder-Mead',
-                 options=options
-                 )
+                 options=options)
     if m.success:
         tms['kb1_kra'] = m.x[0]
         tms['l1_kra'] = -m.fun
@@ -501,13 +506,13 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['kb1_kra'] = np.nan
         tms['l1_kra'] = np.nan
 
-    args = (k_rpm, chi2, noise, dtdz2, dof, 'kraichnan', bin_theory,tms.logbins, p)
+    args = (k_rpm, chi2, noise, dtdz2, dof, 'kraichnan', bin_theory,
+            tms.logbins, ksample, digit, cond1, p)
     m = minimize(cost_function,
                  x0=p.x0,
                  args=args,
                  method='Nelder-Mead',
-                 options=options
-                 )
+                 options=options)
     if m.success:
         tms['kb2_kra'] = m.x[0]
         tms['l2_kra'] = -m.fun
@@ -534,13 +539,13 @@ def compute_goto_eps(tms, p, bin_theory=False):
     tms['y_rc1'] = dtdz1 / (tms.bat1_rc + noise)
     tms['y_rc2'] = dtdz2 / (tms.bat2_rc + noise)
 
-    args = (k_rpm, chi1, noise, dtdz1, dof, 'power', bin_theory,tms.logbins, p)
+    args = (k_rpm, chi1, noise, dtdz1, dof, 'power', bin_theory, tms.logbins,
+            ksample, digit, cond1, p)
     m = minimize(cost_function,
                  x0=[np.nanmean(dtdz1), 0],
                  args=args,
                  method='Nelder-Mead',
-                 options=options
-                 )
+                 options=options)
     if m.success:
         tms['A1'], tms['b1'] = m.x
         tms['l1'] = -m.fun
@@ -548,13 +553,13 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['A1'], tms['b1'] = [np.nan, np.nan]
         tms['l1'] = np.nan
 
-    args = (k_rpm, chi2, noise, dtdz2, dof, 'power', bin_theory,tms.logbins, p)
+    args = (k_rpm, chi2, noise, dtdz2, dof, 'power', bin_theory, tms.logbins,
+            ksample, digit, cond1, p)
     m = minimize(cost_function,
                  x0=[np.nanmean(dtdz2), 0],
                  args=args,
                  method='Nelder-Mead',
-                 options=options
-                 )
+                 options=options)
     if m.success:
         tms['A2'], tms['b2'] = m.x
         tms['l2'] = -m.fun
