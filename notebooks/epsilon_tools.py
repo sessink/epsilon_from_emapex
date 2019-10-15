@@ -1,6 +1,5 @@
 import param
 
-
 class Parameters(param.Parameterized):
 
     # global
@@ -27,6 +26,7 @@ class Parameters(param.Parameterized):
     # Goto QC
     snrmin = param.Number(3, doc='Minimum signal-to-noise ratio.')
 
+p = Parameters()
 
 def convert_tmsdata(chi_dir):
     '''
@@ -578,37 +578,16 @@ def compute_goto_eps(tms, p, bin_theory=False):
     return tms
 
 
-def mad(tms, p):
-    '''
-    Compute Maximum Absolute Deviation
-    (here based on mean) and averaged for wavenumbers where SNR is large
-    '''
-
-    def max_abs_dev(ds):
-        import bottleneck as bn
-        return bn.nanmean(np.abs(ds - bn.nanmean(ds)))
-
-    cond1 = tms.snr1 > p.snrmin
-    cond2 = tms.snr2 > p.snrmin
-
-    tms['mad1_bat'] = max_abs_dev(tms.y_bat1.where(cond1))
-    tms['mad2_bat'] = max_abs_dev(tms.y_bat2.where(cond2))
-
-    tms['mad1_kra'] = max_abs_dev(tms.y_kra1.where(cond1))
-    tms['mad2_kra'] = max_abs_dev(tms.y_kra2.where(cond2))
-
-    tms['mad1_rc'] = max_abs_dev(tms.y_rc1.where(cond1))
-    tms['mad2_rc'] = max_abs_dev(tms.y_rc2.where(cond2))
-    return tms
 
 
-def qc_rc_eps(data, p):
+
+def rm_sensor_malfunction(data, p):
     '''
     clean chi and eps with RC's scripts
     '''
     import numpy as np
     import xarray as xr
-    from tools import str2date, avg_funs
+    from tools import str2date
 
     floats = np.array([
         '7779a', '7781a', '7783a', '7786a', '7787a', '7788a', '7700b', '7701b',
@@ -617,6 +596,30 @@ def qc_rc_eps(data, p):
     fi = np.where(floats == data.floatid)[0][0]
     good_chi1, good_chi2 = np.load('../data/good_chi.npy')
 
+    # 2) periods of functioning chi sensor
+    tmin, tmax = str2date(good_chi1[fi, 0]), str2date(good_chi1[fi, 1])
+    bad = (data.time < tmin) | (data.time > tmax)
+    data['chi1'] = data['chi1'].where(~bad)
+    data['kt1'] = data['kt1'].where(~bad)
+    data['eps1_rc'] = data['eps1_rc'].where(~bad)
+
+    data['eps1_kra'] = data['eps1_kra'].where(~bad)
+    data['eps1_bat'] = data['eps1_bat'].where(~bad)
+
+    tmin, tmax = str2date(good_chi2[fi, 0]), str2date(good_chi2[fi, 1])
+    bad = (data.time < tmin) | (data.time > tmax)
+    data['chi2'] = data['chi2'].where(~bad)
+    data['kt2'] = data['kt2'].where(~bad)
+    data['eps2_rc'] = data['eps2_rc'].where(~bad)
+
+    data['eps2_kra'] = data['eps2_kra'].where(~bad)
+    data['eps2_bat'] = data['eps2_bat'].where(~bad)
+
+    return data
+
+def threshold_for_chi(data, p):
+    import numpy as np
+    import xarray as xr
     # 1) thresholds for chi
     data['dtdz1'] = np.sqrt(0.5 * data.chi1 / data.kt1)
     data['dtdz2'] = np.sqrt(0.5 * data.chi2 / data.kt2)
@@ -633,19 +636,20 @@ def qc_rc_eps(data, p):
     data['kt2'] = data['kt2'].where(~bad)
     data['eps2_rc'] = data['eps2_rc'].where(~bad)
 
-    # 2) periods of functioning chi sensor
-    tmin, tmax = str2date(good_chi1[fi, 0]), str2date(good_chi1[fi, 1])
-    bad = (data.time < tmin) | (data.time > tmax)
-    data['chi1'] = data['chi1'].where(~bad)
-    data['kt1'] = data['kt1'].where(~bad)
-    data['eps1_rc'] = data['eps1_rc'].where(~bad)
+    bad = (data.chi1 >= p.chimax)
+    data['eps1_kra'] = data['eps1_kra'].where(~bad)
+    data['eps1_bat'] = data['eps1_bat'].where(~bad)
 
-    tmin, tmax = str2date(good_chi2[fi, 0]), str2date(good_chi2[fi, 1])
-    bad = (data.time < tmin) | (data.time > tmax)
-    data['chi2'] = data['chi2'].where(~bad)
-    data['kt2'] = data['kt2'].where(~bad)
-    data['eps2_rc'] = data['eps2_rc'].where(~bad)
+    bad = (data.chi2 >= p.chimax)
+    data['eps2_kra'] = data['eps2_kra'].where(~bad)
+    data['eps2_bat'] = data['eps2_bat'].where(~bad)
 
+    return data
+
+def combine_two_sensors(data, p):
+    import numpy as np
+    import xarray as xr
+    from tools import str2date, avg_funs
     # 3) compare two sensors
     def combine_fun(array1, array2):
         ratio = array1 / array2
@@ -669,3 +673,28 @@ def qc_rc_eps(data, p):
 
     data = data.drop(['eps1_rc', 'eps2_rc', 'kt1', 'kt2', 'dtdz1', 'dtdz2'])
     return data
+
+
+    def mad(tms, p):
+        '''
+        Compute Maximum Absolute Deviation
+        (here based on mean) and averaged for wavenumbers where SNR is large
+        '''
+        import numpy as np
+
+        def max_abs_dev(ds):
+            import bottleneck as bn
+            return bn.nanmean(np.abs(ds - bn.nanmean(ds)))
+
+        cond1 = tms.snr1 > p.snrmin
+        cond2 = tms.snr2 > p.snrmin
+
+        tms['mad1_bat'] = max_abs_dev(tms.y_bat1.where(cond1))
+        tms['mad2_bat'] = max_abs_dev(tms.y_bat2.where(cond2))
+
+        tms['mad1_kra'] = max_abs_dev(tms.y_kra1.where(cond1))
+        tms['mad2_kra'] = max_abs_dev(tms.y_kra2.where(cond2))
+
+        tms['mad1_rc'] = max_abs_dev(tms.y_rc1.where(cond1))
+        tms['mad2_rc'] = max_abs_dev(tms.y_rc2.where(cond2))
+        return tms
