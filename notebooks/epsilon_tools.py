@@ -532,12 +532,7 @@ def compute_goto_eps(tms, p, bin_theory=False):
     tms['kra1'] = kraichnan(tms.k_rpm, tms.chi1, tms.kb1_kra, p)
     tms['kra2'] = kraichnan(tms.k_rpm, tms.chi2, tms.kb2_kra, p)
 
-    tms['y_bat1'] = dtdz1 / (tms.bat1 + noise)
-    tms['y_bat2'] = dtdz2 / (tms.bat2 + noise)
-    tms['y_kra1'] = dtdz1 / (tms.kra1 + noise)
-    tms['y_kra2'] = dtdz2 / (tms.kra2 + noise)
-    tms['y_rc1'] = dtdz1 / (tms.bat1_rc + noise)
-    tms['y_rc2'] = dtdz2 / (tms.bat2_rc + noise)
+
 
     args = (k_rpm, chi1, noise, dtdz1, dof, 'power', bin_theory, tms.logbins,
             ksample, digit, cond1, p)
@@ -675,26 +670,40 @@ def combine_two_sensors(data, p):
     return data
 
 
-    def mad(tms, p):
-        '''
-        Compute Maximum Absolute Deviation
-        (here based on mean) and averaged for wavenumbers where SNR is large
-        '''
-        import numpy as np
+def mad_wrapper(tms, p):
+    '''
+    Compute Maximum Absolute Deviation
+    (here based on mean) and averaged for wavenumbers where SNR is large
+    '''
+    import numpy as np
 
-        def max_abs_dev(ds):
-            import bottleneck as bn
-            return bn.nanmean(np.abs(ds - bn.nanmean(ds)))
+    def mad(da):
+        return np.abs( da - da.mean(dim='f_cps') ).mean(dim='f_cps')
 
-        cond1 = tms.snr1 > p.snrmin
-        cond2 = tms.snr2 > p.snrmin
+    cond1 = tms.snr1 > p.snrmin
+    cond2 = tms.snr2 > p.snrmin
 
-        tms['mad1_bat'] = max_abs_dev(tms.y_bat1.where(cond1))
-        tms['mad2_bat'] = max_abs_dev(tms.y_bat2.where(cond2))
+    tms['y_bat1'] = (tms.corrdTdzsp1_rpm/(tms.bat1+tms.noise_rpm)).where(cond1)
+    tms['y_bat2'] = (tms.corrdTdzsp2_rpm/(tms.bat2+tms.noise_rpm)).where(cond2)
+    tms['y_kra1'] = (tms.corrdTdzsp1_rpm/(tms.kra1+tms.noise_rpm)).where(cond1)
+    tms['y_kra2'] = (tms.corrdTdzsp2_rpm/(tms.kra1+tms.noise_rpm)).where(cond2)
+    tms['y_rc1'] =  (tms.corrdTdzsp1_rpm/(tms.bat1_rc+tms.noise_rpm)).where(cond1)
+    tms['y_rc2'] =  (tms.corrdTdzsp2_rpm/(tms.bat2_rc+tms.noise_rpm)).where(cond2)
 
-        tms['mad1_kra'] = max_abs_dev(tms.y_kra1.where(cond1))
-        tms['mad2_kra'] = max_abs_dev(tms.y_kra2.where(cond2))
+    tms['y_bat1'] = (tms.corrdTdzsp1_rpm/(tms.bat1)).where(cond1)
+    tms['y_bat2'] = (tms.corrdTdzsp2_rpm/(tms.bat2)).where(cond2)
+    tms['y_kra1'] = (tms.corrdTdzsp1_rpm/(tms.kra1)).where(cond1)
+    tms['y_kra2'] = (tms.corrdTdzsp2_rpm/(tms.kra1)).where(cond2)
+    tms['y_rc1'] =  (tms.corrdTdzsp1_rpm/(tms.bat1_rc)).where(cond1)
+    tms['y_rc2'] =  (tms.corrdTdzsp2_rpm/(tms.bat2_rc)).where(cond2)
 
-        tms['mad1_rc'] = max_abs_dev(tms.y_rc1.where(cond1))
-        tms['mad2_rc'] = max_abs_dev(tms.y_rc2.where(cond2))
-        return tms
+
+    tms['mad1_bat'] = mad(tms.y_bat1)
+    tms['mad2_bat'] = mad(tms.y_bat2)
+
+    tms['mad1_kra'] = mad(tms.y_kra1)
+    tms['mad2_kra'] = mad(tms.y_kra2)
+
+    tms['mad1_rc'] = mad(tms.y_rc1)
+    tms['mad2_rc'] = mad(tms.y_rc2)
+    return tms
