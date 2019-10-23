@@ -1,22 +1,18 @@
 from glob import glob
 
-
 path = 'data/niw2016/'
-#FLOATS: ['7779a', '7781a', '7783a', '7786a', '7787a', '7788a',
-#    '7700b', '7701b','7780b', '7784b', '7785b', '7786b']
 
-FLOATS = ['7779a']
+# def get_filenames(wildcards):
+#     files = glob_wildcards(path+'{filename}-ctd.mat').filename
+#     print([f+'-ctd.md' for f in files])
+#     return [f+'-ctd.md' for f in files]
 
-print(FLOATS)
-
-rule all:
-    input:
-        expand(path+'{float}/{filename}.md', filename=glob_wildcards(path+'/{wildcards.float}/{filename}-ctd.mat'), float=FLOATS)
+floats, profiles = glob_wildcards(path+'{float}/{profiles}-ctd.mat')
 
 rule compute_eps:
     input:
-        path+'{float}/{filename}.mat'
+        lambda wildcards: glob_wildcards(path+'{wildcards.float}/{profiles}-ctd.mat')
     output:
-        path+'{float}/{filename}.md'
+        path+'{float}/{profile}.nc'
     shell:
         'touch {output}'
