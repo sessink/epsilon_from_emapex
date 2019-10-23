@@ -1,4 +1,10 @@
 import param
+import pandas as pd
+import xarray as xr
+import numpy as np
+import gsw
+import math
+import bottleneck as bn
 
 class Parameters(param.Parameterized):
 
@@ -26,16 +32,15 @@ class Parameters(param.Parameterized):
     # Goto QC
     snrmin = param.Number(3, doc='Minimum signal-to-noise ratio.')
 
+
 p = Parameters()
+
 
 def convert_tmsdata(chi_dir):
     '''
     Reads raw temperature microstructure spectra and converts them to xarray
     '''
     from tools import load_matfile
-    import pandas as pd
-    import xarray as xr
-    import numpy as np
 
     dat = load_matfile(chi_dir)
 
@@ -71,10 +76,8 @@ def convert_ctddata(ctd_dir):
     '''
     Reads raw CTD profile data and converts it to xarray
     '''
-    import gsw
+
     from tools import load_matfile
-    import pandas as pd
-    import xarray as xr
 
     dat = load_matfile(ctd_dir)
     time = pd.to_datetime(dat['UXT'], unit='s')
@@ -104,8 +107,7 @@ def H2ADCfun(Hz):
     '''
     H2 ADC transfer function
     '''
-    import numpy as np
-    import math
+
     Fc5 = 120
     Fc3 = 210  # in Hz
     sinc5 = np.sin(math.pi * Hz / Fc5) / (math.pi * Hz / Fc5)
@@ -121,7 +123,6 @@ def H2FP07fun(Hz, w):
         Hz is frequency in Hz
         U is velocity in m/s
     '''
-    import math
     #     gamma = -0.5 # Hill, 1987
     gamma = -0.32  # Gregg&Meager, 1980
     tau0 = 0.005  # [ms] Gregg&Meager, 1980
@@ -136,7 +137,6 @@ def H2FP07fun_old(Hz, w):
         Hz is frequency in Hz
         U is velocity in m/s
     '''
-    import math
     gamma = -0.5  # Hill, 1987
     #     gamma = -0.32 # Gregg&Meager, 1980
     tau0 = 0.005  # [ms] Gregg&Meager, 1980
@@ -148,7 +148,6 @@ def H2preampfun(Hz):
     '''
     H2 Preamp transfer function
     '''
-    import math
     Fc1 = 339
     Fc2 = 339
     Gd = 0.965
@@ -184,7 +183,6 @@ def batchelor(k_rpm, chi, kb_rpm, p):
     '''
     rapper for batchelor spectrum function to apply to xr dataarray
     '''
-    import xarray as xr
 
     def np_batchelor(k_rpm, chi, kb_rpm, p):
         '''
@@ -193,8 +191,6 @@ def batchelor(k_rpm, chi, kb_rpm, p):
         reference: Oakey, 1982
         see also: Lien, 1992
         '''
-        import numpy as np
-        import math
         from scipy.special import erfc
 
         a = np.sqrt(2 * p.q) * k_rpm / kb_rpm
@@ -212,7 +208,6 @@ def kraichnan(k_rpm, chi, kb_rpm, p):
     '''
     wrapper for kraichnan spectrum function to apply to xr dataarray
     '''
-    import xarray as xr
 
     def np_kraichnan(k_rpm, chi, kb_rpm, p):
         '''
@@ -220,8 +215,6 @@ def kraichnan(k_rpm, chi, kb_rpm, p):
 
         adapted from: Goto et al., 2016
         '''
-        import numpy as np
-        import math
         yk = math.sqrt(p.qk) * k_rpm / kb_rpm
         nom = chi * math.sqrt(p.qk) * yk * np.exp(-math.sqrt(6) * yk)
         denom = (p.D * kb_rpm)
@@ -236,9 +229,6 @@ def prepare_data(tms, ctd):
 
     see: RC's write-up "EM-APEX Turbulence Measurements"
     '''
-    import numpy as np
-    import xarray as xr
-
     # % 1) convert realtime-transmitted scaled spectrum (sla)
     # to digitized voltage Spectrum
     tms['slad1'] = (tms.sla1 - tms.logavgoff) / tms.logavgsf
@@ -304,7 +294,6 @@ def compute_chi(tms, p):
     '''
     Procedure to integrate T gradient spectrum to compute chi
     '''
-    import numpy as np
 
     # % 7) compute chi, kT, and eps1
 
@@ -344,7 +333,6 @@ def compute_rc_eps(tms, p):
 
     see Ren-Chieh's document, 1992
     '''
-    import xarray as xr
 
     #% TODO: qc n2, dTdz
     tms['kt1'] = 0.5 * tms.chi1 / tms.dTdz**2
@@ -390,18 +378,16 @@ def compute_rc_eps(tms, p):
 #     return -bn.nansum(c)
 
 
-def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function,
-                  bin_theory, logbins, ksample, digit, cond, p):
+def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function, bin_theory,
+                  logbins, ksample, digit, cond, p):
     '''
     Cost function for MLE to fit spectra
 
     log chi2 rewritten from scipy.chi2._logpdf
     '''
-    import bottleneck as bn
+
     from epsilon_tools import kraichnan, batchelor
     from scipy.special import xlogy, gammaln
-    import numpy as np
-    import math
 
     def powerlaw(k_rpm, chi, kb, p):
         return kb[0] * k_rpm**(-kb[1])
@@ -425,7 +411,7 @@ def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function,
                 bs.append(np.nan)
 
         theory = np.array(bs)
-        theory = np.where(cond,theory,np.nan)
+        theory = np.where(cond, theory, np.nan)
     else:
         theory = fun(k_rpm, chi, kb, p)
 
@@ -443,7 +429,6 @@ def compute_goto_eps(tms, p, bin_theory=False):
     Requires computation of chi.
     '''
     from scipy.optimize import minimize
-    import numpy as np
 
     cond1 = tms.snr1 > p.snrmin
     cond2 = tms.snr2 > p.snrmin
@@ -492,8 +477,8 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['kb2_bat'] = np.nan
         tms['l2_bat'] = np.nan
 
-    args = (k_rpm, chi1, noise, dtdz1, dof, 'kraichnan',
-            bin_theory, tms.logbins, ksample, digit, cond1, p)
+    args = (k_rpm, chi1, noise, dtdz1, dof, 'kraichnan', bin_theory,
+            tms.logbins, ksample, digit, cond1, p)
     m = minimize(cost_function,
                  x0=p.x0,
                  args=args,
@@ -531,8 +516,6 @@ def compute_goto_eps(tms, p, bin_theory=False):
 
     tms['kra1'] = kraichnan(tms.k_rpm, tms.chi1, tms.kb1_kra, p)
     tms['kra2'] = kraichnan(tms.k_rpm, tms.chi2, tms.kb2_kra, p)
-
-
 
     args = (k_rpm, chi1, noise, dtdz1, dof, 'power', bin_theory, tms.logbins,
             ksample, digit, cond1, p)
@@ -573,15 +556,10 @@ def compute_goto_eps(tms, p, bin_theory=False):
     return tms
 
 
-
-
-
 def rm_sensor_malfunction(data, p):
     '''
     clean chi and eps with RC's scripts
     '''
-    import numpy as np
-    import xarray as xr
     from tools import str2date
 
     floats = np.array([
@@ -612,9 +590,9 @@ def rm_sensor_malfunction(data, p):
 
     return data
 
+
 def threshold_for_chi(data, p):
-    import numpy as np
-    import xarray as xr
+
     # 1) thresholds for chi
     data['dtdz1'] = np.sqrt(0.5 * data.chi1 / data.kt1)
     data['dtdz2'] = np.sqrt(0.5 * data.chi2 / data.kt2)
@@ -641,10 +619,10 @@ def threshold_for_chi(data, p):
 
     return data
 
+
 def combine_two_sensors(data, p):
-    import numpy as np
-    import xarray as xr
     from tools import str2date, avg_funs
+
     # 3) compare two sensors
     def combine_fun(array1, array2):
         ratio = array1 / array2
@@ -675,28 +653,32 @@ def mad_wrapper(tms, p):
     Compute Maximum Absolute Deviation
     (here based on mean) and averaged for wavenumbers where SNR is large
     '''
-    import numpy as np
 
     def mad(da):
-        return np.abs( da - da.mean(dim='f_cps') ).mean(dim='f_cps')
+        return np.abs(da - da.mean(dim='f_cps')).mean(dim='f_cps')
 
     cond1 = tms.snr1 > p.snrmin
     cond2 = tms.snr2 > p.snrmin
 
-    tms['y_bat1'] = (tms.corrdTdzsp1_rpm/(tms.bat1+tms.noise_rpm)).where(cond1)
-    tms['y_bat2'] = (tms.corrdTdzsp2_rpm/(tms.bat2+tms.noise_rpm)).where(cond2)
-    tms['y_kra1'] = (tms.corrdTdzsp1_rpm/(tms.kra1+tms.noise_rpm)).where(cond1)
-    tms['y_kra2'] = (tms.corrdTdzsp2_rpm/(tms.kra1+tms.noise_rpm)).where(cond2)
-    tms['y_rc1'] =  (tms.corrdTdzsp1_rpm/(tms.bat1_rc+tms.noise_rpm)).where(cond1)
-    tms['y_rc2'] =  (tms.corrdTdzsp2_rpm/(tms.bat2_rc+tms.noise_rpm)).where(cond2)
+    tms['y_bat1'] = (tms.corrdTdzsp1_rpm /
+                     (tms.bat1 + tms.noise_rpm)).where(cond1)
+    tms['y_bat2'] = (tms.corrdTdzsp2_rpm /
+                     (tms.bat2 + tms.noise_rpm)).where(cond2)
+    tms['y_kra1'] = (tms.corrdTdzsp1_rpm /
+                     (tms.kra1 + tms.noise_rpm)).where(cond1)
+    tms['y_kra2'] = (tms.corrdTdzsp2_rpm /
+                     (tms.kra1 + tms.noise_rpm)).where(cond2)
+    tms['y_rc1'] = (tms.corrdTdzsp1_rpm /
+                    (tms.bat1_rc + tms.noise_rpm)).where(cond1)
+    tms['y_rc2'] = (tms.corrdTdzsp2_rpm /
+                    (tms.bat2_rc + tms.noise_rpm)).where(cond2)
 
-    tms['y_bat1'] = (tms.corrdTdzsp1_rpm/(tms.bat1)).where(cond1)
-    tms['y_bat2'] = (tms.corrdTdzsp2_rpm/(tms.bat2)).where(cond2)
-    tms['y_kra1'] = (tms.corrdTdzsp1_rpm/(tms.kra1)).where(cond1)
-    tms['y_kra2'] = (tms.corrdTdzsp2_rpm/(tms.kra1)).where(cond2)
-    tms['y_rc1'] =  (tms.corrdTdzsp1_rpm/(tms.bat1_rc)).where(cond1)
-    tms['y_rc2'] =  (tms.corrdTdzsp2_rpm/(tms.bat2_rc)).where(cond2)
-
+    tms['y_bat1'] = (tms.corrdTdzsp1_rpm / (tms.bat1)).where(cond1)
+    tms['y_bat2'] = (tms.corrdTdzsp2_rpm / (tms.bat2)).where(cond2)
+    tms['y_kra1'] = (tms.corrdTdzsp1_rpm / (tms.kra1)).where(cond1)
+    tms['y_kra2'] = (tms.corrdTdzsp2_rpm / (tms.kra1)).where(cond2)
+    tms['y_rc1'] = (tms.corrdTdzsp1_rpm / (tms.bat1_rc)).where(cond1)
+    tms['y_rc2'] = (tms.corrdTdzsp2_rpm / (tms.bat2_rc)).where(cond2)
 
     tms['mad1_bat'] = mad(tms.y_bat1)
     tms['mad2_bat'] = mad(tms.y_bat2)
