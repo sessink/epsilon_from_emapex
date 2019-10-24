@@ -13,9 +13,6 @@ from scipy.special import gammaln
 from scipy.optimize import curve_fit, minimize
 
 # Plotting
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import seaborn as sns
 import hvplot.xarray
 
 from epsilon_tools import *
@@ -24,22 +21,18 @@ import warnings
 warnings.simplefilter("ignore",category=FutureWarning)
 warnings.simplefilter("ignore",category=RuntimeWarning)
 
-# set up figure params
-sns.set(style='ticks', context='paper', palette='colorblind')
-mpl.rc('figure', dpi=100, figsize=[11, 5])
-mpl.rc('savefig', dpi=500, bbox='tight')
-mpl.rc('legend', frameon=False)
-
 # %% MAIN
 p = Parameters()
 a = time()
-liste = ['7786b-0200']
+
 ds=[]
-for l in liste:
-    chi_dir = '../data/test_profiles/ema-'+l+'-tms.mat'
-    tms = convert_tmsdata(chi_dir)
-    ctd_dir = '../data/test_profiles/ema-'+l+'-ctd.mat'
-    ctd = convert_ctddata(ctd_dir)
+
+ctd_dir = snakemake.input[0]
+chi_dir = snakemake.input[1]
+tms = convert_tmsdata(chi_dir)
+ctd = convert_ctddata(ctd_dir)
+
+if ~tms.isempty() & ~ctd.isempty:
 
     turb = []
     for jblock in range(tms.time.size):
@@ -54,10 +47,11 @@ for l in liste:
         turb.append(tms_block)
 
     turb = xr.concat(turb, dim='time')
-    ds.append(turb)
 
-ds =  xr.concat(ds, dim='time')
-ds['dof'] = ds.dof.isel(time=0)
+    turb['dof'] = turb.dof.isel(time=0)
 
-b = (time()-a)/60
-print(f'{b:2.2f} minutes')
+    turb.to_netcdf(snakemake.output)
+
+else:
+    turb = xr.Dataset()
+    turb.to_netcdf(snakemake.output)
