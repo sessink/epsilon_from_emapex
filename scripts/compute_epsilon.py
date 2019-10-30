@@ -27,12 +27,12 @@ a = time()
 
 ds=[]
 
-ctd_dir = snakemake.input[0]
-chi_dir = snakemake.input[1]
+ctd_dir = str( snakemake.input[0] )
+chi_dir = str( snakemake.input[1] )
 tms = convert_tmsdata(chi_dir)
 ctd = convert_ctddata(ctd_dir)
 
-if ~tms.isempty() & ~ctd.isempty:
+if len(tms)>0 and len(ctd)>0:
 
     turb = []
     for jblock in range(tms.time.size):
@@ -54,4 +54,4 @@ if ~tms.isempty() & ~ctd.isempty:
 
 else:
     turb = xr.Dataset()
-    turb.to_netcdf(snakemake.output)
+    turb.to_netcdf(str(snakemake.output))

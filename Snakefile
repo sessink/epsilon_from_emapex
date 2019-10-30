@@ -3,8 +3,10 @@ import re
 
 path = 'data/'
 
-FLOATS = ['7779a', '7781a', '7783a', '7786a', '7787a', '7788a',
-    '7700b', '7701b','7780b', '7784b', '7785b', '7786b']
+# FLOATS = ['7779a', '7781a', '7783a', '7786a', '7787a', '7788a',
+#     '7700b', '7701b','7780b', '7784b', '7785b', '7786b']
+#
+# YEARS = ['niw2016','niw2017']
 
 # def get_filenames(wildcards):
 #     files = glob_wildcards(path+'{filename}-ctd.mat').filename
