@@ -50,7 +50,7 @@ if len(tms)>0 and len(ctd)>0:
 
     turb['dof'] = turb.dof.isel(time=0)
 
-    turb.to_netcdf(snakemake.output)
+    turb.to_netcdf(str(snakemake.output))
 
 else:
     turb = xr.Dataset()
