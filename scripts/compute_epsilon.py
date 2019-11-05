@@ -21,37 +21,51 @@ import warnings
 warnings.simplefilter("ignore",category=FutureWarning)
 warnings.simplefilter("ignore",category=RuntimeWarning)
 
+# %%
+
+def exists(path):
+    try:
+        os.path.getsize(path)>0
+    except:
+        return False
+
 # %% MAIN
 p = Parameters()
-a = time()
 
 ds=[]
 
 ctd_dir = str( snakemake.input[0] )
 chi_dir = str( snakemake.input[1] )
-tms = convert_tmsdata(chi_dir)
-ctd = convert_ctddata(ctd_dir)
 
-if len(tms)>0 and len(ctd)>0:
+if exists(ctd_dir):
+    ctd = convert_ctddata(ctd_dir)
 
-    turb = []
-    for jblock in range(tms.time.size):
+if exists(chi_dir):
+    tms = convert_tmsdata(chi_dir)
 
-        tms_block = tms.isel(time=jblock)
+
+turb = []
+for jblock in range(tms.time.size):
+
+    tms_block = tms.isel(time=jblock)
+
+    if exists(ctd_dir):
         tms_block = prepare_data(tms_block, ctd)
+
+    if exists(chi_dir):
         tms_block = compute_chi(tms_block, p)
+
+    if exists(ctd_dir) & exists(chi_dir):
         tms_block = compute_rc_eps(tms_block, p)
+
+    if exists(chi_dir):
         tms_block = compute_goto_eps(tms_block, p)
 
-        tms_block = tms_block.swap_dims({'k_rpm': 'f_cps'})
-        turb.append(tms_block)
+    tms_block = tms_block.swap_dims({'k_rpm': 'f_cps'})
+    turb.append(tms_block)
 
-    turb = xr.concat(turb, dim='time')
+turb = xr.concat(turb, dim='time')
 
-    turb['dof'] = turb.dof.isel(time=0)
+turb['dof'] = turb.dof.isel(time=0)
 
-    turb.to_netcdf(str(snakemake.output))
-
-else:
-    turb = xr.Dataset()
-    turb.to_netcdf(str(snakemake.output))
+turb.to_netcdf(str(snakemake.output))

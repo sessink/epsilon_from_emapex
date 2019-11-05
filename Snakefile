@@ -17,6 +17,12 @@ path = 'data/'
 
 years, floats, profiles = glob_wildcards(path+'{year}/{float}/{profiles}-ctd.mat')#, files=files)
 
+def exists(path):
+    try:
+        os.path.getsize(path)>0
+    except:
+        return False
+
 rule all:
     input:
         expand( path+'{year}/{float}/{profile}.nc', zip, year=years, float=floats, profile=profiles)
@@ -29,10 +35,11 @@ rule missing_files:
     shell:
         '''
         FILE={output}
-        if test -f "$FILE"; then
+        if test -f "$FILE"
+        then
             echo "$FILE exist"
-        elif
-            touch {output}
+        else
+            touch $FILE
         fi
         '''
 
