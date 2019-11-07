@@ -1,6 +1,8 @@
 import os
 from glob import glob
 import re
+import warnings
+warnings.simplefilter("ignore",category=FutureWarning)
 
 path = 'data/'
 
@@ -16,7 +18,7 @@ path = 'data/'
 
 # files = glob(path+'*/*-ctd.mat' )
 
-years, floats, profiles = glob_wildcards(path+'{year,niw2017}/{float,7785b}/{profiles}-tms.mat')
+years, floats, profiles = glob_wildcards(path+'{year,niw2017}/{float}/{profiles}-tms.mat')
 
 rule all:
     input:
