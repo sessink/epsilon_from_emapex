@@ -1,4 +1,4 @@
-import sys
+import sys,os
 sys.path.append('../scripts/')
 
 from time import time
@@ -25,7 +25,7 @@ warnings.simplefilter("ignore",category=RuntimeWarning)
 
 def exists(path):
     try:
-        os.path.getsize(path)>0
+        return os.path.getsize(path)>0
     except:
         return False
 

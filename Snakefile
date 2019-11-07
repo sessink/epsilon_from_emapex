@@ -1,3 +1,4 @@
+import os
 from glob import glob
 import re
 
@@ -15,13 +16,7 @@ path = 'data/'
 
 # files = glob(path+'*/*-ctd.mat' )
 
-years, floats, profiles = glob_wildcards(path+'{year,niw2017}/{float,7785b}/{profiles}-tms.mat')#, files=files)
-
-def exists(path):
-    try:
-        os.path.getsize(path)>0
-    except:
-        return False
+years, floats, profiles = glob_wildcards(path+'{year,niw2017}/{float,7785b}/{profiles}-tms.mat')
 
 rule all:
     input:
