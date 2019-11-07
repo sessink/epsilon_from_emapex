@@ -15,7 +15,7 @@ path = 'data/'
 
 # files = glob(path+'*/*-ctd.mat' )
 
-years, floats, profiles = glob_wildcards(path+'{year}/{float}/{profiles}-ctd.mat')#, files=files)
+years, floats, profiles = glob_wildcards(path+'{year,niw2017}/{float,7785b}/{profiles}-tms.mat')#, files=files)
 
 def exists(path):
     try:
@@ -27,21 +27,21 @@ rule all:
     input:
         expand( path+'{year}/{float}/{profile}.nc', zip, year=years, float=floats, profile=profiles)
 
-rule missing_files:
-    input:
-        path+'{year}/{float}/{profile}-ctd.mat',
-    output:
-        path+'{year}/{float}/{profile}-tms.mat'
-    shell:
-        '''
-        FILE={output}
-        if test -f "$FILE"
-        then
-            echo "$FILE exist"
-        else
-            touch $FILE
-        fi
-        '''
+# rule missing_files:
+#     input:
+#         path+'{year}/{float}/{profile}-ctd.mat',
+#     output:
+#         path+'{year}/{float}/{profile}-tms.mat'
+#     shell:
+#         '''
+#         FILE={output}
+#         if test -f "$FILE"
+#         then
+#             echo "$FILE exist"
+#         else
+#             touch $FILE
+#         fi
+#         '''
 
 rule compute_eps:
     input:

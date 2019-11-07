@@ -32,8 +32,6 @@ def exists(path):
 # %% MAIN
 p = Parameters()
 
-ds=[]
-
 ctd_dir = str( snakemake.input[0] )
 chi_dir = str( snakemake.input[1] )
 
@@ -43,23 +41,15 @@ if exists(ctd_dir):
 if exists(chi_dir):
     tms = convert_tmsdata(chi_dir)
 
-
 turb = []
 for jblock in range(tms.time.size):
 
     tms_block = tms.isel(time=jblock)
 
-    if exists(ctd_dir):
-        tms_block = prepare_data(tms_block, ctd)
-
-    if exists(chi_dir):
-        tms_block = compute_chi(tms_block, p)
-
-    if exists(ctd_dir) & exists(chi_dir):
-        tms_block = compute_rc_eps(tms_block, p)
-
-    if exists(chi_dir):
-        tms_block = compute_goto_eps(tms_block, p)
+    tms_block = prepare_data(tms_block, ctd)
+    tms_block = compute_chi(tms_block, p)
+    tms_block = compute_rc_eps(tms_block, p)
+    tms_block = compute_goto_eps(tms_block, p)
 
     tms_block = tms_block.swap_dims({'k_rpm': 'f_cps'})
     turb.append(tms_block)
