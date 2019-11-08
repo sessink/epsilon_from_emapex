@@ -45,7 +45,6 @@ turb = []
 for jblock in range(tms.time.size):
 
     tms_block = tms.isel(time=jblock)
-
     tms_block = prepare_data(tms_block, ctd)
     tms_block = compute_chi(tms_block, p)
     tms_block = compute_rc_eps(tms_block, p)
