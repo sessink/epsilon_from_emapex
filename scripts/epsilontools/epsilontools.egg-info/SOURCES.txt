@@ -1,0 +1,9 @@
+setup.py
+epsilontools/__init__.py
+epsilontools/epsilon_tools.py
+epsilontools/tools.py
+epsilontools.egg-info/PKG-INFO
+epsilontools.egg-info/SOURCES.txt
+epsilontools.egg-info/dependency_links.txt
+epsilontools.egg-info/not-zip-safe
+epsilontools.egg-info/top_level.txt

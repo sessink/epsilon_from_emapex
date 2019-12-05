@@ -32,6 +32,7 @@ class Parameters(param.Parameterized):
     # Goto QC
     snrmin = param.Number(3, doc='Minimum signal-to-noise ratio.')
 
+
 p = Parameters()
 
 
@@ -61,8 +62,8 @@ def convert_tmsdata(chi_dir):
         attrs={
             'nobs': dat['nobs'],
             'floatid': chi_dir.split('-')[1],
-            'logavgoff': dat['logavgoff'],
-            'logavgsf': dat['logavgsf'],
+            'logavgoff': np.unique(dat['logavgoff']),
+            'logavgsf': np.unique(dat['logavgsf']),
             'logbins': np.append(dat['flabeg'], dat['flaend'][-1])
         })
 
@@ -297,10 +298,10 @@ def compute_chi(tms, p):
     # % 7) compute chi, kT, and eps1
 
     tms = tms.swap_dims({'f_cps': 'k_rpm'})
-    #     condition = (tms.k_rpm <= p.kzmax) & (tms.k_rpm >= p.kzmin)
 
-    cond1 = tms.snr1 > p.snrmin
-    cond2 = tms.snr2 > p.snrmin
+    cond0 = (tms.k_rpm <= p.kzmax) & (tms.k_rpm >= p.kzmin)
+    cond1 = (tms.snr1 > p.snrmin) & cond0
+    cond2 = (tms.snr2 > p.snrmin) & cond0
 
     if cond1.sum() >= 3:
         tms['chi1'] = 6 * p.D * (tms.corrdTdzsp1_rpm -
@@ -376,7 +377,6 @@ def compute_rc_eps(tms, p):
 #
 #     return -bn.nansum(c)
 
-
 def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function, bin_theory,
                   logbins, ksample, digit, cond, p):
     '''
@@ -385,7 +385,7 @@ def cost_function(kb, k_rpm, chi, noise, corrdTdz, dof, function, bin_theory,
     log chi2 rewritten from scipy.chi2._logpdf
     '''
 
-    from epsilon_tools import kraichnan, batchelor
+    from epsilontools.epsilon_tools import kraichnan, batchelor
     from scipy.special import xlogy, gammaln
 
     def powerlaw(k_rpm, chi, kb, p):
@@ -429,8 +429,9 @@ def compute_goto_eps(tms, p, bin_theory=False):
     '''
     from scipy.optimize import minimize
 
-    cond1 = tms.snr1 > p.snrmin
-    cond2 = tms.snr2 > p.snrmin
+    cond0 = (tms.k_rpm <= p.kzmax) & (tms.k_rpm >= p.kzmin)
+    cond1 = (tms.snr1 > p.snrmin) & cond0
+    cond2 = (tms.snr2 > p.snrmin) & cond0
 
     dof = tms.where(cond1).dof.values
     chi1 = tms.where(cond1).chi1.values
@@ -559,7 +560,7 @@ def rm_sensor_malfunction(data, p):
     '''
     clean chi and eps with RC's scripts
     '''
-    from tools import str2date
+    from epsilontools.tools import str2date
 
     floats = np.array([
         '7779a', '7781a', '7783a', '7786a', '7787a', '7788a', '7700b', '7701b',
@@ -620,7 +621,7 @@ def threshold_for_chi(data, p):
 
 
 def combine_two_sensors(data, p):
-    from tools import str2date, avg_funs
+    from epsilontools.tools import str2date, avg_funs
 
     # 3) compare two sensors
     def combine_fun(array1, array2):
