@@ -1,0 +1,2 @@
+function [deriv] = lienmmderiv()
+end
