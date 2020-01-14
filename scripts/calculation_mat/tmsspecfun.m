@@ -8,7 +8,9 @@
 %     dT = beta * dV = beta * dADC * Vref / 2^23 / Inet;
 %
    D = 1.4e-7; nu = 1.2e-6; q =3.7;
-   tmsfile = [tmsdata_dir int2str(floatid) 'b/' 'ema-' int2str(floatid) 'b-' myint2str(hpid,4) '-tms.mat'];
+   tmsfile = [tmsdata_dir int2str(floatid) 'b/' 'ema-' int2str(floatid) 'b-' sprintf( '%04d', hpid ) '-tms.mat'];
+   % changed sprintf from original code
+   
    A = load(tmsfile);
    A.f = (A.flabeg +A.flaend)/2;
    A.jday_gmt = nanmean(A.uxt/86400) + datenum(1970,1,1,0,0,0);
@@ -26,7 +28,8 @@
 %
 %    Find Vertical Velocity and Stratification and convert to wavenumber
 %
-   ctdfn = [ctddata_dir int2str(floatid) 'b/' 'ema-' int2str(floatid) 'b-' myint2str(hpid,4) '-ctd.mat'];
+   ctdfn = [ctddata_dir int2str(floatid) 'b/' 'ema-' int2str(floatid) 'b-' sprintf( '%04d', hpid ) '-ctd.mat'];
+   % changed sprintf from original code
    [Pr,N,dTdz,W,T]= nBkgfun(ctdfn,A.uxt(jblock));
    N = abs(N); W = abs(W); A.k = A.f/W;
    Fit.k_cpm = A.k;
@@ -112,7 +115,7 @@
       plot(A.f,H2adc,A.f,H2preamp,A.f,H2fp07,A.f,H2total,'linewidth',3);
       xlabel('Frequency (Hz)');
       ylabel('Transfer function squared H2');
-      myaxis;
+%       myaxis;
       title(Bkgtitletext)
    %
    %  Raw spectrum and Corrected Spectrum
@@ -123,7 +126,8 @@
       plot(A.f,A.rawTsp1,A.f,A.corrTsp1_cps,'linewidth',3);
       xlabel('Frequency (Hz)');
       ylabel('Raw and Corrected \Phi_T (C^2 / Hz)');
-      myaxis;
+%       myaxis;
+  
    %
    %  Convert from frequency to wavenumber spectrum
    %
@@ -134,7 +138,7 @@
       plot(k_rpm,A.corrTsp1_rpm,'linewidth',3);
       xlabel('kz (m^{-1})');
       ylabel('Corrected \Phi_T (C^2 m)');
-      myaxis;
+%       myaxis;
       title(chititletext1)
 
       x0 = x0+dx+ddx;
@@ -144,7 +148,7 @@
       plot(k_rpm(g),Batchelorsp1(g),'k--',k_rpm(g),Batchelorsp2(g),'r--','linewidth',3);
       xlabel('kz (m^{-1})');
       ylabel('Corrected \Phi_{\partial_z T} (C^2 m^{-1})');
-      ax = myaxis;
+%       ax = myaxis;
  %    set(gca,'ylim',[1.0e-9 Inf])
       title(chititletext2)
  %    pause
