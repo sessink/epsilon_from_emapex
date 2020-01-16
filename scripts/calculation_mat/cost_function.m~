@@ -1,0 +1,7 @@
+function [output] = cost_function()
+% Cost function for MLE to fit spectra
+%
+% S.Essink, December 2019
+
+
+end

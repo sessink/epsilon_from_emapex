@@ -1,4 +1,5 @@
    function [Chi,Fit] = chiprofile_fun(floatid,hpid,data_dir,kzmin,kzmax,plotting,threshold);
+   %%    
        tmsdata_dir = data_dir;
        ctddata_dir = tmsdata_dir;
        tmsfile=[tmsdata_dir int2str(floatid) 'b/ema-' int2str(floatid) 'b-' ...
@@ -14,9 +15,6 @@
               jblock = i;
               Fit=tmsspecfun(tmsdata_dir,ctddata_dir,floatid,hpid,jblock,kzmin,kzmax,...
               plotting,threshold);
-               
-              % here I call the new routine:
-              Fit = gotofun(fit);
               
               Pr(i) = Fit.Pr; W(i) = Fit.W; N(i) = Fit.N;
               chi1(i) = Fit.chi1; chi2(i) = Fit.chi2;

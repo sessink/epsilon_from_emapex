@@ -1,10 +1,13 @@
 clear all   
 % chi_data_dir = [niskinehomedir 'data/emapex/dec/']; 
    chi_data_dir = ['../../data/niw2017/']; 
+   data_dir = chi_data_dir;
    floatid = 7785;
    hpid = 2;
    kzmin = 20; kzmax = 400; plotting = 1; threshold = 4;
    plotting = 1; 
+   
+   %%
    Chi = chiprofile_fun(floatid,hpid,chi_data_dir,kzmin,kzmax,plotting,threshold);
     
    j=1;

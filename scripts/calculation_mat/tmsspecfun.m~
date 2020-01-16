@@ -7,7 +7,6 @@
 %
 %     dT = beta * dV = beta * dADC * Vref / 2^23 / Inet;
 %
-%    jblock =100
    D = 1.4e-7; nu = 1.2e-6; q =3.7;
    tmsfile = [tmsdata_dir int2str(floatid) 'b/' 'ema-' int2str(floatid) 'b-' sprintf( '%04d', hpid ) '-tms.mat'];
    % changed sprintf from original code
@@ -91,22 +90,9 @@
    Batchelorsp2 = batchelor_jhd(k_rpm, epsilon2,chi2, nu, D, q) /(2*pi);
    Fit.KT2 = KT2; Fit.epsilon2 = epsilon2; Fit.Batchelorsp2 = Batchelorsp2;
 
-   %% here is the new part:
-   Fit.noise_rpm = noisespec(Fit.f_cps).*(Fit.k_rpm.^2).*Fit.W./ (2 * pi);
-   g  = find(Fit.k_rpm <= kzmax & Fit.k_rpm >= kzmin);
-   
-   dof=4;
-   f1 = @(kb)cost_function(kb,Fit.k_rpm(g),Fit.chi1,...
-        Fit.noise_rpm(g),Fit.corrdTdzsp1_rpm(g),dof);
-   f2 = @(kb)cost_function(kb,Fit.k_rpm(g),Fit.chi2,...
-        Fit.noise_rpm(g),Fit.corrdTdzsp2_rpm(g),dof);
-   
-   kb=360; % initial guess
-   [kb1,] = fminunc(f1,kb); % use standard options here, room for optimization!
-   [kb2,] = fminunc(f2,kb);
-   
-   Fit.eps1_goto = kb1.^4 * nu * D.^2;
-   Fit.eps2_goto = kb2.^4 * nu * D.^2;
+   % here I call the new routine:
+   Fit.n
+   Fit = gotofun(Fit);
    
    %%
    if plotting;
