@@ -91,10 +91,19 @@ Batchelorsp2 = batchelor_jhd(k_rpm, epsilon2,chi2, nu, D, q) /(2*pi);
 Fit.KT2 = KT2; Fit.epsilon2 = epsilon2; Fit.Batchelorsp2 = Batchelorsp2;
 
 %% here is the new part:
+
+% This is your emperical noise function converted to be temperature
+% gradient spectral noise in rpm
 Fit.noise_rpm = noisespec(Fit.f_cps).*(Fit.k_rpm.^2).*Fit.W./ (2 * pi);
+
+% I use the same band over which you integrate the T gradient spectrum to
+% get chi. I needed to modify the code to use eps=1e-16 instead of 0, where
+% SNR is small.
 g  = find(Fit.k_rpm <= kzmax & Fit.k_rpm >= kzmin);
 
 dof=5;
+% Here I input all the known data into the cost function, 
+% so that it only takes kb as an argument:
 f1 = @(kb)cost_function(kb,Fit.k_rpm(g),Fit.chi1,...
     Fit.noise_rpm(g),Fit.corrdTdzsp1_rpm(g),dof);
 f2 = @(kb)cost_function(kb,Fit.k_rpm(g),Fit.chi2,...
@@ -103,12 +112,17 @@ f2 = @(kb)cost_function(kb,Fit.k_rpm(g),Fit.chi2,...
 kb=350; % initial guess
 % use standard options here, room for optimization!
 options = optimoptions(@fminunc,'Display','off');
+
+% This is the minimization part. It spits out the kb's for which the cost
+% function is minimal.
 [kb1,] = fminunc(f1,kb,options);
 [kb2,] = fminunc(f2,kb,options);
 
+% Here I compute epsilon from kb
 Fit.eps1_goto = kb1^4 * nu * D^2;
 Fit.eps2_goto = kb2^4 * nu * D^2;
 
+% This is just to track bugs and see if kb is fitted correctly.
 Fit.kb1 = kb1;
 Fit.kb2 = kb2;
 

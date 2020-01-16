@@ -95,12 +95,13 @@ Fit.noise_rpm = noisespec(Fit.f_cps).*(Fit.k_rpm.^2).*Fit.W./ (2 * pi);
 g  = find(Fit.k_rpm <= kzmax & Fit.k_rpm >= kzmin);
 
 dof=5;
+% Here I
 f1 = @(kb)cost_function(kb,Fit.k_rpm(g),Fit.chi1,...
     Fit.noise_rpm(g),Fit.corrdTdzsp1_rpm(g),dof);
 f2 = @(kb)cost_function(kb,Fit.k_rpm(g),Fit.chi2,...
     Fit.noise_rpm(g),Fit.corrdTdzsp2_rpm(g),dof);
 
-kb=360; % initial guess
+kb=350; % initial guess
 % use standard options here, room for optimization!
 options = optimoptions(@fminunc,'Display','off');
 [kb1,] = fminunc(f1,kb,options);
@@ -113,24 +114,23 @@ Fit.kb1 = kb1;
 Fit.kb2 = kb2;
 
 %% plot
-figure;
-loglog(Fit.k_rpm,Fit.corrdTdzsp1_rpm,'+-','color','b')
-hold on
-loglog(Fit.k_rpm(g),Fit.corrdTdzsp1_rpm(g),'+-','Linewidth',2,'color','b')
-
-loglog(Fit.k_rpm,kraichnan(Fit.k_rpm,Fit.chi1,Fit.kb1),'+-','color','r')
-loglog(Fit.k_rpm(g),kraichnan(Fit.k_rpm(g),Fit.chi1,Fit.kb1),'+-','Linewidth',2,'color','r')
-
-loglog(Fit.k_rpm,kraichnan(Fit.k_rpm,Fit.chi2,Fit.kb2),'+-','color','orange')
-loglog(Fit.k_rpm(g),kraichnan(Fit.k_rpm(g),Fit.chi2,Fit.kb2),'+-','Linewidth',2,'color','orange')
-
-
-loglog(Fit.k_rpm,Fit.noise_rpm)
-xlim([1e1,1e3])
+% figure;
+% loglog(Fit.k_rpm,Fit.corrdTdzsp1_rpm,'+-','color','b')
+% hold on
+% loglog(Fit.k_rpm(g),Fit.corrdTdzsp1_rpm(g),'+-','Linewidth',2,'color','b')
+% 
+% loglog(Fit.k_rpm,kraichnan(Fit.k_rpm,Fit.chi1,Fit.kb1),'+-','color','r')
+% loglog(Fit.k_rpm(g),kraichnan(Fit.k_rpm(g),Fit.chi1,Fit.kb1),'+-','Linewidth',2,'color','r')
+% 
+% loglog(Fit.k_rpm,kraichnan(Fit.k_rpm,Fit.chi2,Fit.kb2),'+-','color','m')
+% loglog(Fit.k_rpm(g),kraichnan(Fit.k_rpm(g),Fit.chi2,Fit.kb2),'+-','Linewidth',2,'color','m')
+% 
+% 
+% loglog(Fit.k_rpm,Fit.noise_rpm)
+% xlim([1e1,1e3])
 
 %%
 if plotting;
-    figure;
     Bkgtitle1 = sprintf('Float %4.0f  hpid %4.0f block %6.0f',floatid,hpid,jblock);
     Bkgtitle2 = sprintf('Pr  = %4.0f m ',Pr);
     Bkgtitle3 = sprintf('\\partial_z T = %6.4f C/m',dTdz);
