@@ -1,6 +1,8 @@
 clear all
-% chi_data_dir = [niskinehomedir 'data/emapex/dec/'];
-chi_data_dir = ['../../data/niw2017/'];
+% directory to *-tms.mat and *-ctd.mat
+chi_data_dir = [niskinehomedir 'data/emapex/dec/'];
+% chi_data_dir = ['../../data/niw2017/'];
+
 data_dir = chi_data_dir;
 floatid = 7785;
 hpid = 12;
