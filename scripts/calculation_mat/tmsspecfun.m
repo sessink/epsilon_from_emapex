@@ -102,8 +102,10 @@
         Fit.noise_rpm(g),Fit.corrdTdzsp2_rpm(g),dof);
    
    kb=360; % initial guess
-   [kb1,] = fminunc(f1,kb); % use standard options here, room for optimization!
-   [kb2,] = fminunc(f2,kb);
+   % use standard options here, room for optimization!
+   options = optimoptions(@fminunc,'Display','off');
+   [kb1,] = fminunc(f1,kb,options); 
+   [kb2,] = fminunc(f2,kb,options);
    
    Fit.eps1_goto = kb1.^4 * nu * D.^2;
    Fit.eps2_goto = kb2.^4 * nu * D.^2;

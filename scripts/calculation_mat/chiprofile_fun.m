@@ -19,6 +19,8 @@
               Pr(i) = Fit.Pr; W(i) = Fit.W; N(i) = Fit.N;
               chi1(i) = Fit.chi1; chi2(i) = Fit.chi2;
               epsilon1(i) = Fit.epsilon1; epsilon2(i) = Fit.epsilon2;
+              % new:
+              eps1_goto(i) = Fit.eps1_goto; eps2_goto(i) = Fit.eps2_goto;
               KT1(i) = Fit.KT1; KT2(i) = Fit.KT2;
               Chi.f_cps(:,i) = Fit.f_cps(:);
               Chi.corrTsp1_cps(:,i) = Fit.corrTsp1_cps(:);
@@ -36,6 +38,8 @@
           if exist('Pr');
              Chi.P = Pr; Chi.W = W; Chi.N = N; Chi.chi1 = chi1; Chi.chi2 = chi2;
              Chi.eps1 = epsilon1; Chi.eps2 = epsilon2; Chi.kT1= KT1; Chi.kT2 = KT2;
+             % new:
+             Chi.eps1_goto = eps1_goto; Chi.eps2_goto = eps2_goto;
              Chi.T = T;
              if plotting;
                 x0 = 0.1; y0 = 0.7; dx = 0.2; dy = 0.25; ddx= 0.02;
