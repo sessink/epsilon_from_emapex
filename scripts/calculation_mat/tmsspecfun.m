@@ -101,7 +101,7 @@ Fit.noise_rpm = noisespec(Fit.f_cps).*(Fit.k_rpm.^2).*Fit.W./ (2 * pi);
 % SNR is small.
 g  = find(Fit.k_rpm <= kzmax & Fit.k_rpm >= kzmin);
 
-dof=5;
+dof=5; % degrees of freedom
 % Here I input all the known data into the cost function, 
 % so that it only takes kb as an argument:
 f1 = @(kb)cost_function(kb,Fit.k_rpm(g),Fit.chi1,...
@@ -126,7 +126,7 @@ Fit.eps2_goto = kb2^4 * nu * D^2;
 Fit.kb1 = kb1;
 Fit.kb2 = kb2;
 
-%% plot
+%% plot fitting
 % figure;
 % loglog(Fit.k_rpm,Fit.corrdTdzsp1_rpm,'+-','color','b')
 % hold on
