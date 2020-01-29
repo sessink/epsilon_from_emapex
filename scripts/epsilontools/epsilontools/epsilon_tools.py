@@ -30,8 +30,9 @@ class Parameters(param.Parameterized):
     dof = param.Number(5, doc='for MLE, degrees of freedom')
 
     # Goto QC
-    snrmin1 = param.Number(1, doc='Minimum signal-to-noise ratio for spectral fit.')
-    snrmin2 = param.Number(4, doc='Minimum signal-to-noise ratio for chi.')
+    snrmin1 = param.Number(4, doc='Minimum signal-to-noise ratio for chi.')
+    snrmin2 = param.Number(1, doc='Minimum signal-to-noise ratio for spectral fit.')
+
 
 p = Parameters()
 
@@ -170,12 +171,14 @@ def remove_noise_sp(tms, threshold):
     '''
     Remove values that are less than the noise spectrum
     '''
+    eps = 7./3 - 4./3 -1
+
     # TODO: Empirical, check against raw spectrum
     noisesp = noise_spectrum(tms.f_cps)
     tms['corrTsp1_cps'] = tms.corrTsp1_cps.where(
-        tms.corrTsp1_cps / (threshold * noisesp) > 1, 0)
+        tms.corrTsp1_cps / (threshold * noisesp) > 1, eps)
     tms['corrTsp2_cps'] = tms.corrTsp2_cps.where(
-        tms.corrTsp2_cps / (threshold * noisesp) > 1, 0)
+        tms.corrTsp2_cps / (threshold * noisesp) > 1, eps)
     return tms
 
 
@@ -300,8 +303,8 @@ def compute_chi(tms, p):
     tms = tms.swap_dims({'f_cps': 'k_rpm'})
 
     cond0 = (tms.k_rpm <= p.kzmax) & (tms.k_rpm >= p.kzmin)
-    cond1 = (tms.snr1 > p.snrmin2) & cond0
-    cond2 = (tms.snr2 > p.snrmin2) & cond0
+    cond1 = (tms.snr1 > p.snrmin1) & cond0
+    cond2 = (tms.snr2 > p.snrmin1) & cond0
 
     if cond1.sum() >= 3:
         tms['chi1'] = 6 * p.D * (tms.corrdTdzsp1_rpm -
@@ -430,8 +433,8 @@ def compute_goto_eps(tms, p, bin_theory=False):
     from scipy.optimize import minimize
 
     cond0 = (tms.k_rpm <= p.kzmax) & (tms.k_rpm >= p.kzmin)
-    cond1 = (tms.snr1 > p.snrmin1) & cond0
-    cond2 = (tms.snr2 > p.snrmin1) & cond0
+    cond1 = (tms.snr1 > p.snrmin2) & cond0
+    cond2 = (tms.snr2 > p.snrmin2) & cond0
 
     dof = tms.where(cond1).dof.values
     chi1 = tms.where(cond1).chi1.values
@@ -449,33 +452,33 @@ def compute_goto_eps(tms, p, bin_theory=False):
     # options = {'maxiter': 1000, 'xatol': 1e-2, 'fatol': 1e-2}
     options = {}
 
-    args = (k_rpm, chi1, noise, dtdz1, dof, 'batchelor', bin_theory,
-            tms.logbins, ksample, digit, cond1, p)
-    m = minimize(cost_function,
-                 x0=p.x0,
-                 args=args,
-                 method='Nelder-Mead',
-                 options=options)
-    if m.success:
-        tms['kb1_bat'] = m.x[0]
-        tms['l1_bat'] = -m.fun
-    else:
-        tms['kb1_bat'] = np.nan
-        tms['l1_bat'] = np.nan
-
-    args = (k_rpm, chi2, noise, dtdz2, dof, 'batchelor', bin_theory,
-            tms.logbins, ksample, digit, cond1, p)
-    m = minimize(cost_function,
-                 x0=p.x0,
-                 args=args,
-                 method='Nelder-Mead',
-                 options=options)
-    if m.success:
-        tms['kb2_bat'] = m.x[0]
-        tms['l2_bat'] = -m.fun
-    else:
-        tms['kb2_bat'] = np.nan
-        tms['l2_bat'] = np.nan
+    # args = (k_rpm, chi1, noise, dtdz1, dof, 'batchelor', bin_theory,
+    #         tms.logbins, ksample, digit, cond1, p)
+    # m = minimize(cost_function,
+    #              x0=p.x0,
+    #              args=args,
+    #              method='Nelder-Mead',
+    #              options=options)
+    # if m.success:
+    #     tms['kb1_bat'] = m.x[0]
+    #     tms['l1_bat'] = -m.fun
+    # else:
+    #     tms['kb1_bat'] = np.nan
+    #     tms['l1_bat'] = np.nan
+    #
+    # args = (k_rpm, chi2, noise, dtdz2, dof, 'batchelor', bin_theory,
+    #         tms.logbins, ksample, digit, cond1, p)
+    # m = minimize(cost_function,
+    #              x0=p.x0,
+    #              args=args,
+    #              method='Nelder-Mead',
+    #              options=options)
+    # if m.success:
+    #     tms['kb2_bat'] = m.x[0]
+    #     tms['l2_bat'] = -m.fun
+    # else:
+    #     tms['kb2_bat'] = np.nan
+    #     tms['l2_bat'] = np.nan
 
     args = (k_rpm, chi1, noise, dtdz1, dof, 'kraichnan', bin_theory,
             tms.logbins, ksample, digit, cond1, p)
@@ -505,14 +508,14 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['kb2_kra'] = np.nan
         tms['l2_kra'] = np.nan
 
-    tms['eps1_bat'] = tms['kb1_bat']**4 * p.nu * p.D**2
-    tms['eps2_bat'] = tms['kb2_bat']**4 * p.nu * p.D**2  #* (2 * np.pi)**4
+    # tms['eps1_bat'] = tms['kb1_bat']**4 * p.nu * p.D**2
+    # tms['eps2_bat'] = tms['kb2_bat']**4 * p.nu * p.D**2  #* (2 * np.pi)**4
 
     tms['eps1_kra'] = tms['kb1_kra']**4 * p.nu * p.D**2
     tms['eps2_kra'] = tms['kb2_kra']**4 * p.nu * p.D**2
 
-    tms['bat1'] = batchelor(tms.k_rpm, tms.chi1, tms.kb1_bat, p)
-    tms['bat2'] = batchelor(tms.k_rpm, tms.chi2, tms.kb2_bat, p)
+    # tms['bat1'] = batchelor(tms.k_rpm, tms.chi1, tms.kb1_bat, p)
+    # tms['bat2'] = batchelor(tms.k_rpm, tms.chi2, tms.kb2_bat, p)
 
     tms['kra1'] = kraichnan(tms.k_rpm, tms.chi1, tms.kb1_kra, p)
     tms['kra2'] = kraichnan(tms.k_rpm, tms.chi2, tms.kb2_kra, p)
@@ -545,8 +548,8 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['A2'], tms['b2'] = [np.nan, np.nan]
         tms['l2'] = np.nan
 
-    tms['lhr1_bat'] = (tms.l1_bat - tms.l1) * np.log10(np.exp(1))
-    tms['lhr2_bat'] = (tms.l2_bat - tms.l2) * np.log10(np.exp(1))
+    # tms['lhr1_bat'] = (tms.l1_bat - tms.l1) * np.log10(np.exp(1))
+    # tms['lhr2_bat'] = (tms.l2_bat - tms.l2) * np.log10(np.exp(1))
 
     tms['lhr1_kra'] = (tms.l1_kra - tms.l1) * np.log10(np.exp(1))
     tms['lhr2_kra'] = (tms.l2_kra - tms.l2) * np.log10(np.exp(1))
@@ -577,7 +580,7 @@ def rm_sensor_malfunction(data, p):
     data['eps1_rc'] = data['eps1_rc'].where(~bad)
 
     data['eps1_kra'] = data['eps1_kra'].where(~bad)
-    data['eps1_bat'] = data['eps1_bat'].where(~bad)
+    # data['eps1_bat'] = data['eps1_bat'].where(~bad)
 
     tmin, tmax = str2date(good_chi2[fi, 0]), str2date(good_chi2[fi, 1])
     bad = (data.time < tmin) | (data.time > tmax)
@@ -586,7 +589,7 @@ def rm_sensor_malfunction(data, p):
     data['eps2_rc'] = data['eps2_rc'].where(~bad)
 
     data['eps2_kra'] = data['eps2_kra'].where(~bad)
-    data['eps2_bat'] = data['eps2_bat'].where(~bad)
+    # data['eps2_bat'] = data['eps2_bat'].where(~bad)
 
     return data
 
@@ -611,11 +614,11 @@ def threshold_for_chi(data, p):
 
     bad = (data.chi1 >= p.chimax)
     data['eps1_kra'] = data['eps1_kra'].where(~bad)
-    data['eps1_bat'] = data['eps1_bat'].where(~bad)
+    # data['eps1_bat'] = data['eps1_bat'].where(~bad)
 
     bad = (data.chi2 >= p.chimax)
     data['eps2_kra'] = data['eps2_kra'].where(~bad)
-    data['eps2_bat'] = data['eps2_bat'].where(~bad)
+    # data['eps2_bat'] = data['eps2_bat'].where(~bad)
 
     return data
 
@@ -657,13 +660,13 @@ def mad_wrapper(tms, p):
     def mad(da):
         return np.abs(da - da.mean(dim='f_cps')).mean(dim='f_cps')
 
-    cond1 = tms.snr1 > p.snrmin1
-    cond2 = tms.snr2 > p.snrmin1
+    cond1 = tms.snr1 > p.snrmin2
+    cond2 = tms.snr2 > p.snrmin2
 
-    tms['y_bat1'] = (tms.corrdTdzsp1_rpm /
-                     (tms.bat1 + tms.noise_rpm)).where(cond1)
-    tms['y_bat2'] = (tms.corrdTdzsp2_rpm /
-                     (tms.bat2 + tms.noise_rpm)).where(cond2)
+    # tms['y_bat1'] = (tms.corrdTdzsp1_rpm /
+    #                  (tms.bat1 + tms.noise_rpm)).where(cond1)
+    # tms['y_bat2'] = (tms.corrdTdzsp2_rpm /
+    #                  (tms.bat2 + tms.noise_rpm)).where(cond2)
     tms['y_kra1'] = (tms.corrdTdzsp1_rpm /
                      (tms.kra1 + tms.noise_rpm)).where(cond1)
     tms['y_kra2'] = (tms.corrdTdzsp2_rpm /
@@ -673,15 +676,15 @@ def mad_wrapper(tms, p):
     tms['y_rc2'] = (tms.corrdTdzsp2_rpm /
                     (tms.bat2_rc + tms.noise_rpm)).where(cond2)
 
-    tms['y_bat1'] = (tms.corrdTdzsp1_rpm / (tms.bat1)).where(cond1)
-    tms['y_bat2'] = (tms.corrdTdzsp2_rpm / (tms.bat2)).where(cond2)
+    # tms['y_bat1'] = (tms.corrdTdzsp1_rpm / (tms.bat1)).where(cond1)
+    # tms['y_bat2'] = (tms.corrdTdzsp2_rpm / (tms.bat2)).where(cond2)
     tms['y_kra1'] = (tms.corrdTdzsp1_rpm / (tms.kra1)).where(cond1)
     tms['y_kra2'] = (tms.corrdTdzsp2_rpm / (tms.kra1)).where(cond2)
     tms['y_rc1'] = (tms.corrdTdzsp1_rpm / (tms.bat1_rc)).where(cond1)
     tms['y_rc2'] = (tms.corrdTdzsp2_rpm / (tms.bat2_rc)).where(cond2)
 
-    tms['mad1_bat'] = mad(tms.y_bat1)
-    tms['mad2_bat'] = mad(tms.y_bat2)
+    # tms['mad1_bat'] = mad(tms.y_bat1)
+    # tms['mad2_bat'] = mad(tms.y_bat2)
 
     tms['mad1_kra'] = mad(tms.y_kra1)
     tms['mad2_kra'] = mad(tms.y_kra2)
