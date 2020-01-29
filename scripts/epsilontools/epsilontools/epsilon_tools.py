@@ -17,7 +17,7 @@ class Parameters(param.Parameterized):
 
     # for computation of chi
     kzmin = param.Number(20, doc='min k where SNR>1')
-    kzmax = param.Number(600, doc='max k where SNR>1')
+    kzmax = param.Number(2400, doc='max k where SNR>1')
 
     # for RC QC
     dtdzmin = param.Number(1.5e-3, doc='for eps QC, mininum dTdz')
@@ -30,8 +30,8 @@ class Parameters(param.Parameterized):
     dof = param.Number(5, doc='for MLE, degrees of freedom')
 
     # Goto QC
-    snrmin = param.Number(3, doc='Minimum signal-to-noise ratio.')
-
+    snrmin1 = param.Number(1, doc='Minimum signal-to-noise ratio for spectral fit.')
+    snrmin2 = param.Number(4, doc='Minimum signal-to-noise ratio for chi.')
 
 p = Parameters()
 
@@ -300,8 +300,8 @@ def compute_chi(tms, p):
     tms = tms.swap_dims({'f_cps': 'k_rpm'})
 
     cond0 = (tms.k_rpm <= p.kzmax) & (tms.k_rpm >= p.kzmin)
-    cond1 = (tms.snr1 > p.snrmin) & cond0
-    cond2 = (tms.snr2 > p.snrmin) & cond0
+    cond1 = (tms.snr1 > p.snrmin2) & cond0
+    cond2 = (tms.snr2 > p.snrmin2) & cond0
 
     if cond1.sum() >= 3:
         tms['chi1'] = 6 * p.D * (tms.corrdTdzsp1_rpm -
@@ -430,8 +430,8 @@ def compute_goto_eps(tms, p, bin_theory=False):
     from scipy.optimize import minimize
 
     cond0 = (tms.k_rpm <= p.kzmax) & (tms.k_rpm >= p.kzmin)
-    cond1 = (tms.snr1 > p.snrmin) & cond0
-    cond2 = (tms.snr2 > p.snrmin) & cond0
+    cond1 = (tms.snr1 > p.snrmin1) & cond0
+    cond2 = (tms.snr2 > p.snrmin1) & cond0
 
     dof = tms.where(cond1).dof.values
     chi1 = tms.where(cond1).chi1.values
@@ -657,8 +657,8 @@ def mad_wrapper(tms, p):
     def mad(da):
         return np.abs(da - da.mean(dim='f_cps')).mean(dim='f_cps')
 
-    cond1 = tms.snr1 > p.snrmin
-    cond2 = tms.snr2 > p.snrmin
+    cond1 = tms.snr1 > p.snrmin1
+    cond2 = tms.snr2 > p.snrmin1
 
     tms['y_bat1'] = (tms.corrdTdzsp1_rpm /
                      (tms.bat1 + tms.noise_rpm)).where(cond1)

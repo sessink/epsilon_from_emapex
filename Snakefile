@@ -18,27 +18,11 @@ path = 'data/'
 
 # files = glob(path+'*/*-ctd.mat' )
 
-years, floats, profiles = glob_wildcards(path+'{year,niw2017}/{float}/{profiles}-tms.mat')
+years, floats, profiles = glob_wildcards(path+'{year,niw2016}/{float,7781a}/{profiles}-tms.mat')
 
 rule all:
     input:
         expand( path+'{year}/{float}/{profile}.nc', zip, year=years, float=floats, profile=profiles)
-
-# rule missing_files:
-#     input:
-#         path+'{year}/{float}/{profile}-ctd.mat',
-#     output:
-#         path+'{year}/{float}/{profile}-tms.mat'
-#     shell:
-#         '''
-#         FILE={output}
-#         if test -f "$FILE"
-#         then
-#             echo "$FILE exist"
-#         else
-#             touch $FILE
-#         fi
-#         '''
 
 rule compute_eps:
     input:
@@ -48,3 +32,15 @@ rule compute_eps:
         path+'{year}/{float}/{profile}.nc'
     script:
         'scripts/compute_epsilon.py'
+
+# rule combine:
+#     input:
+#         expand( path+'{year}/{float}/{profile}.nc', year=years, float=floats, profile=profiles)
+#     output:
+#         path+'{year}/combined/{float}.nc'
+#     script:
+#         '''
+#         import xarray as xr
+#         ds = xr.open_mfdataset(snakemake.input).persist()
+#         ds.to_netcdf(snakemake.output)
+#         '''

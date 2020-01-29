@@ -15,7 +15,7 @@ from scipy.optimize import curve_fit, minimize
 # Plotting
 import hvplot.xarray
 
-from epsilon_tools import *
+from epsilontools.epsilon_tools import *
 
 import warnings
 warnings.simplefilter("ignore",category=FutureWarning)
