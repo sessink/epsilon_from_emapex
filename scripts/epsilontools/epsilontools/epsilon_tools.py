@@ -495,7 +495,7 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['l1_kra'] = np.nan
 
     args = (k_rpm, chi2, noise, dtdz2, dof, 'kraichnan', bin_theory,
-            tms.logbins, ksample, digit, cond1, p)
+            tms.logbins, ksample, digit, cond2, p)
     m = minimize(cost_function,
                  x0=p.x0,
                  args=args,
@@ -535,7 +535,7 @@ def compute_goto_eps(tms, p, bin_theory=False):
         tms['l1'] = np.nan
 
     args = (k_rpm, chi2, noise, dtdz2, dof, 'power', bin_theory, tms.logbins,
-            ksample, digit, cond1, p)
+            ksample, digit, cond2, p)
     m = minimize(cost_function,
                  x0=[np.nanmean(dtdz2), 0],
                  args=args,
@@ -578,7 +578,6 @@ def rm_sensor_malfunction(data, p):
     data['chi1'] = data['chi1'].where(~bad)
     data['kt1'] = data['kt1'].where(~bad)
     data['eps1_rc'] = data['eps1_rc'].where(~bad)
-
     data['eps1_kra'] = data['eps1_kra'].where(~bad)
     # data['eps1_bat'] = data['eps1_bat'].where(~bad)
 
@@ -587,7 +586,6 @@ def rm_sensor_malfunction(data, p):
     data['chi2'] = data['chi2'].where(~bad)
     data['kt2'] = data['kt2'].where(~bad)
     data['eps2_rc'] = data['eps2_rc'].where(~bad)
-
     data['eps2_kra'] = data['eps2_kra'].where(~bad)
     # data['eps2_bat'] = data['eps2_bat'].where(~bad)
 
@@ -646,8 +644,10 @@ def combine_two_sensors(data, p):
     data['kT'] = combine_fun(data.kt1, data.kt2)
     data['chi'] = combine_fun(data.chi1, data.chi2)
     data['eps_rc'] = combine_fun(data.eps1_rc, data.eps2_rc)
+    data['eps_kra'] = combine_fun(data.eps1_kra, data.eps2_kra)
 
-    data = data.drop(['eps1_rc', 'eps2_rc', 'kt1', 'kt2', 'dtdz1', 'dtdz2'])
+    data = data.drop(['eps1_rc', 'eps2_rc', 'eps1_kra', 'eps2_kra',
+                      'kt1', 'kt2', 'dtdz1', 'dtdz2'])
     return data
 
 

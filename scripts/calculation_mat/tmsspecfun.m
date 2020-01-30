@@ -102,7 +102,7 @@ Fit.noise_rpm = noisespec(Fit.f_cps).*(Fit.k_rpm.^2).*Fit.W./ (2 * pi);
 g  = find(Fit.k_rpm <= kzmax & Fit.k_rpm >= kzmin);
 
 dof=5; % degrees of freedom
-% Here I input all the known data into the cost function, 
+% Here I input all the known data into the cost function,
 % so that it only takes kb as an argument:
 f1 = @(kb)cost_function(kb,Fit.k_rpm(g),Fit.chi1,...
     Fit.noise_rpm(g),Fit.corrdTdzsp1_rpm(g),dof);
@@ -131,14 +131,13 @@ Fit.kb2 = kb2;
 % loglog(Fit.k_rpm,Fit.corrdTdzsp1_rpm,'+-','color','b')
 % hold on
 % loglog(Fit.k_rpm(g),Fit.corrdTdzsp1_rpm(g),'+-','Linewidth',2,'color','b')
-% 
+%
 % loglog(Fit.k_rpm,kraichnan(Fit.k_rpm,Fit.chi1,Fit.kb1),'+-','color','r')
 % loglog(Fit.k_rpm(g),kraichnan(Fit.k_rpm(g),Fit.chi1,Fit.kb1),'+-','Linewidth',2,'color','r')
-% 
+%
 % loglog(Fit.k_rpm,kraichnan(Fit.k_rpm,Fit.chi2,Fit.kb2),'+-','color','m')
 % loglog(Fit.k_rpm(g),kraichnan(Fit.k_rpm(g),Fit.chi2,Fit.kb2),'+-','Linewidth',2,'color','m')
-% 
-% 
+%
 % loglog(Fit.k_rpm,Fit.noise_rpm)
 % xlim([1e1,1e3])
 
@@ -149,17 +148,17 @@ if plotting;
     Bkgtitle3 = sprintf('\\partial_z T = %6.4f C/m',dTdz);
     Bkgtitle4 = sprintf('N   = %6.2e 1/s',N);
     Bkgtitletext = str2mat(Bkgtitle1,Bkgtitle2,Bkgtitle3,Bkgtitle4);
-    
+
     chititle1 = sprintf('\\chi_1 = %6.2e C^2/s',chi1);
     chititle2 = sprintf('K_T_1  = %6.2e m^2/s',KT1);
     chititle3 = sprintf('\\epsilon_1  = %6.2e m^2/s^3',epsilon1);
     chititletext1 = str2mat(chititle1,chititle2,chititle3);
-    
+
     chititle1 = sprintf('\\chi_2 = %6.2e C^2/s',chi2);
     chititle2 = sprintf('K_T_2  = %6.2e m^2/s',KT2);
     chititle3 = sprintf('\\epsilon_2  = %6.2e m^2/s^3',epsilon2);
     chititletext2 = str2mat(chititle1,chititle2,chititle3);
-    
+
     xtick = 10.^(-1:2);
     x0 = 0.18; y0 = 0.65; dx = 0.3; dy = 0.2; ddx = 0.15; ddy = 0.25;
     axes('position',[x0 y0 dx dy],'box','on','xscale','log','yscale','log','xtick',xtick);
@@ -171,7 +170,7 @@ if plotting;
     title(Bkgtitletext)
     %
     %  Raw spectrum and Corrected Spectrum
-    
+
     x0 = x0+dx+ddx;
     axes('position',[x0 y0 dx dy],'box','on','xscale','log','yscale','log','xtick',xtick);
     hold on
@@ -179,7 +178,7 @@ if plotting;
     xlabel('Frequency (Hz)');
     ylabel('Raw and Corrected \Phi_T (C^2 / Hz)');
     %       myaxis;
-    
+
     %
     %  Convert from frequency to wavenumber spectrum
     %
@@ -192,7 +191,7 @@ if plotting;
     ylabel('Corrected \Phi_T (C^2 m)');
     %       myaxis;
     title(chititletext1)
-    
+
     x0 = x0+dx+ddx;
     axes('position',[x0 y0 dx dy],'box','on','xscale','log','yscale','log','xtick',xtick);
     hold on
